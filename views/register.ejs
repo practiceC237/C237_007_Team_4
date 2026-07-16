@@ -35,31 +35,34 @@
                            value="<%= formData && formData.email ? formData.email : '' %>" required autocomplete="email">
                 </div>
                 <div class="form-group">
-                    <label for="password">Password <span class="label-hint">(at least 8 characters)</span></label>
+                    <label for="password">Password</label>
                     <div class="password-wrap">
-                        <input type="password" id="password" name="password" placeholder="Create a password" required autocomplete="new-password">
+                        <input type="password" id="password" name="password" placeholder="Create a password"
+                               minlength="8" required autocomplete="new-password">
                         <button type="button" class="toggle-password" data-target="password" aria-label="Show password">
                             <svg class="icon"><use href="/images/icons.svg#icon-eye"></use></svg>
                         </button>
+                    </div>
+                    <div class="password-requirements">
+                        <p>Password must contain at least 8 characters, including:</p>
+                        <ul>
+                            <li>One uppercase letter</li>
+                            <li>One lowercase letter</li>
+                            <li>One number</li>
+                            <li>One symbol</li>
+                        </ul>
                     </div>
                 </div>
                 <div class="form-group">
                     <label for="confirmPassword">Confirm Password</label>
                     <div class="password-wrap">
-                        <input type="password" id="confirmPassword" name="confirmPassword" placeholder="Confirm your password" required autocomplete="new-password">
+                        <input type="password" id="confirmPassword" name="confirmPassword" placeholder="Confirm your password"
+                               minlength="8" required autocomplete="new-password">
                         <button type="button" class="toggle-password" data-target="confirmPassword" aria-label="Show password">
                             <svg class="icon"><use href="/images/icons.svg#icon-eye"></use></svg>
                         </button>
                     </div>
                     <p class="match-hint" data-match-hint hidden>Passwords do not match yet.</p>
-                </div>
-                <div class="form-group">
-                    <label for="role">Role</label>
-                    <select id="role" name="role" class="form-control" required>
-                        <option value="" disabled <%= !formData || !formData.role ? 'selected' : '' %>>Select your role</option>
-                        <option value="traveler" <%= formData && formData.role === 'traveler' ? 'selected' : '' %>>Traveler</option>
-                        <option value="admin" <%= formData && formData.role === 'admin' ? 'selected' : '' %>>Admin</option>
-                    </select>
                 </div>
                 <button type="submit" class="btn btn-primary btn-block">
                     <svg class="icon"><use href="/images/icons.svg#icon-plane"></use></svg>Create Account</button>

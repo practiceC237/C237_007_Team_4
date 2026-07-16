@@ -82,11 +82,21 @@ app.use((req, res, next) => {
 // Middleware: validation, authentication, authorisation
 // ==================================================
 
-// Server-side validation for the registration form (Lesson 19 Step 1)
-const allowedRoles = ['traveler', 'admin'];
+// Password strength: at least 8 characters, one uppercase, one lowercase,
+// one number and one symbol. Enforced here (server-side) for both
+// registration and password reset — never relying on the HTML
+// `minlength`/`required` attributes alone, since those can be bypassed.
+const strongPasswordRegex =
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
+const passwordRequirementsMessage =
+    'Password must contain at least 8 characters, including one uppercase letter, one lowercase letter, one number and one symbol.';
 
+// Server-side validation for the registration form (Lesson 19 Step 1)
+// Public registration never accepts a role from the browser — every
+// account created here is a traveler. Admin accounts are promoted
+// manually (SQL), never through this form.
 const validateRegistration = (req, res, next) => {
-    const { fullName, password, confirmPassword, role } = req.body;
+    const { fullName, password, confirmPassword } = req.body;
     const email = (req.body.email || '').trim().toLowerCase();
     const errors = [];
 
@@ -94,16 +104,14 @@ const validateRegistration = (req, res, next) => {
     if (!email) errors.push('Email address is required.');
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.push('Please enter a valid email address.');
     if (!password) errors.push('Password is required.');
-    else if (password.length < 8) errors.push('Password must be at least 8 characters long.');
+    else if (!strongPasswordRegex.test(password)) errors.push(passwordRequirementsMessage);
     if (!confirmPassword) errors.push('Please confirm your password.');
     else if (password && password !== confirmPassword) errors.push('Password and confirm password do not match.');
-    // Allowlist check — never trust the role value the browser sends
-    if (!allowedRoles.includes(role)) errors.push('Please select a valid role.');
 
     if (errors.length > 0) {
         req.flash('error', errors);
-        // Preserve only full name, email and role — never the passwords
-        req.flash('formData', { fullName, email, role });
+        // Preserve only full name and email — never the passwords
+        req.flash('formData', { fullName, email });
         return res.redirect('/register');
     }
 
@@ -126,7 +134,8 @@ const checkAdmin = (req, res, next) => {
     if (req.session.user && req.session.user.role === 'admin') {
         return next();
     }
-    res.status(403).render('access-denied');
+    req.flash('error', "You don't have permission to access that page.");
+    res.redirect('/dashboard');
 };
 
 // ==================================================
@@ -150,15 +159,7 @@ app.get('/register', (req, res) => {
 });
 
 app.post('/register', validateRegistration, (req, res) => {
-    const { fullName, email, password, role } = req.body;
-
-    // Defence in depth: validateRegistration already checked this,
-    // but never trust a role value from the browser at the insert site either.
-    if (!allowedRoles.includes(role)) {
-        req.flash('error', 'Please select a valid role.');
-        req.flash('formData', { fullName, email, role });
-        return res.redirect('/register');
-    }
+    const { fullName, email, password } = req.body;
 
     // 1. Check the email is not already registered (parameterised query)
     const checkSql = 'SELECT userId FROM users WHERE email = ?';
@@ -170,7 +171,7 @@ app.post('/register', validateRegistration, (req, res) => {
         }
         if (results.length > 0) {
             req.flash('error', 'This email is already registered. Please log in instead.');
-            req.flash('formData', { fullName, email, role });
+            req.flash('formData', { fullName, email });
             return res.redirect('/register');
         }
 
@@ -182,17 +183,16 @@ app.post('/register', validateRegistration, (req, res) => {
                 return res.redirect('/register');
             }
 
-            // 3. Insert the new user with the selected, allowlisted role.
-            const insertSql = 'INSERT INTO users (fullName, email, passwordHash, role) VALUES (?, ?, ?, ?)';
-            db.query(insertSql, [fullName.trim(), email, passwordHash, role], (insertErr) => {
+            // 3. Insert the new user — always as a traveler. Admin accounts
+            // are never created through public registration.
+            const insertSql = 'INSERT INTO users (fullName, email, passwordHash, role) VALUES (?, ?, ?, \'traveler\')';
+            db.query(insertSql, [fullName.trim(), email, passwordHash], (insertErr) => {
                 if (insertErr) {
                     console.error(insertErr);
                     req.flash('error', 'Something went wrong. Please try again.');
                     return res.redirect('/register');
                 }
-                req.flash('success', role === 'admin'
-                    ? 'Admin account created! Please log in.'
-                    : 'Traveler profile created! Please log in to start your journey.');
+                req.flash('success', 'Traveler profile created! Please log in to start your journey.');
                 res.redirect('/login');
             });
         });
@@ -339,12 +339,13 @@ app.post('/reset-password/:token', (req, res) => {
     const errors = [];
 
     if (!password) errors.push('Password is required.');
-    else if (password.length < 8) errors.push('Password must be at least 8 characters long.');
+    else if (!strongPasswordRegex.test(password)) errors.push(passwordRequirementsMessage);
     if (!confirmPassword) errors.push('Please confirm your password.');
     else if (password && password !== confirmPassword) errors.push('Password and confirm password do not match.');
 
     if (errors.length > 0) {
         req.flash('error', errors);
+        // Redirecting back to the same token URL preserves it for the retry
         return res.redirect('/reset-password/' + req.params.token);
     }
 
