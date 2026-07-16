@@ -53,6 +53,14 @@
                     </div>
                     <p class="match-hint" data-match-hint hidden>Passwords do not match yet.</p>
                 </div>
+                <div class="form-group">
+                    <label for="role">Role</label>
+                    <select id="role" name="role" class="form-control" required>
+                        <option value="" disabled <%= !formData || !formData.role ? 'selected' : '' %>>Select your role</option>
+                        <option value="traveler" <%= formData && formData.role === 'traveler' ? 'selected' : '' %>>Traveler</option>
+                        <option value="admin" <%= formData && formData.role === 'admin' ? 'selected' : '' %>>Admin</option>
+                    </select>
+                </div>
                 <button type="submit" class="btn btn-primary btn-block">
                     <svg class="icon"><use href="/images/icons.svg#icon-plane"></use></svg>Create Account</button>
             </form>

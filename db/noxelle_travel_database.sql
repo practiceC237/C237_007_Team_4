@@ -1,17 +1,6 @@
 -- =============================================================
--- Noxelle Travel - Complete Database Setup
--- Current project scope: Authentication and Authorisation
--- =============================================================
 -- This script creates the local database and the users table used
 -- by app.js for registration, login, admin access and password reset.
---
--- LOCAL MYSQL:
--- Run this entire script in MySQL Workbench.
---
--- AZURE MYSQL:
--- Do not run CREATE DATABASE if your lecturer already created the
--- team database. Replace "USE noxelle_travel;" with:
--- USE c237_007_team4_travelplanner;
 -- =============================================================
 
 CREATE DATABASE IF NOT EXISTS noxelle_travel
@@ -49,10 +38,3 @@ CREATE TABLE IF NOT EXISTS users (
 -- -------------------------------------------------------------
 SHOW TABLES;
 DESCRIBE users;
-
--- -------------------------------------------------------------
--- Create the first administrator safely after importing this file:
--- node scripts/create-admin.js "Admin Name" admin@noxelle.travel
---
--- Do not insert a plain-text password into this SQL file.
--- -------------------------------------------------------------

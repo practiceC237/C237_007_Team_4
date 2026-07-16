@@ -1,8 +1,4 @@
 /* ==================================================
-   Noxelle Travel — public/css/style.css
-   Your journey, our priority.
-   All styling for every page lives in this one file.
-
    Sections:
    01 CSS variables            11 Sidebar
    02 Reset & global styles    12 Traveler dashboard
@@ -561,7 +557,9 @@ input[type="email"],
 input[type="password"],
 input[type="date"],
 input[type="number"],
-input[type="search"] {
+input[type="search"],
+select,
+.form-control {
     width: 100%;
     background: var(--surface);
     border: 1px solid var(--border);
@@ -574,12 +572,14 @@ input[type="search"] {
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-input:focus {
+input:focus,
+select:focus {
     border-color: var(--secondary);
     box-shadow: 0 0 0 3px rgba(245, 130, 32, 0.18);
 }
 
-input:disabled {
+input:disabled,
+select:disabled {
     background: var(--surface-soft);
     cursor: not-allowed;
 }
