@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title><%= pageTitle %> — Noxelle Travel</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="app-body">
+    <%- include('partials/apptopbar') %>
+
+    <div class="app-shell">
+        <%- include('partials/sidebar', { area: area, active: active }) %>
+
+        <div class="app-main">
+            <main class="app-content">
+                <%- include('partials/alerts') %>
+
+                <section class="page-header">
+                    <h1><%= pageTitle %></h1>
+                </section>
+
+                <section class="empty-panel">
+                    <svg class="icon empty-panel-icon"><use href="/images/icons.svg#icon-<%= icon %>"></use></svg>
+                    <h2>Nothing here yet</h2>
+                    <p class="empty-state"><%= blurb %></p>
+                    <p class="empty-note">This feature is being built by the team — the page is already protected by login<%= area === 'admin' ? ' and admin authorisation' : '' %>.</p>
+                </section>
+            </main>
+        </div>
+    </div>
+    <script src="/js/auth.js"></script>
+</body>
+</html>

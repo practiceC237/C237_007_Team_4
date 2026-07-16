@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Admin Dashboard — Noxelle Travel</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="app-body">
+    <%- include('partials/apptopbar') %>
+
+    <div class="app-shell">
+        <%- include('partials/sidebar', { area: 'admin', active: '/admin' }) %>
+
+        <div class="app-main">
+            <main class="app-content">
+                <%- include('partials/alerts') %>
+
+                <section class="welcome-row">
+                    <h1>Admin Dashboard</h1>
+                    <p>Manage travelers, trips and reports for Noxelle Travel.</p>
+                </section>
+
+                <!-- Totals connect to MySQL when teammates' features land -->
+                <section class="stat-grid">
+                    <div class="stat-card">
+                        <span class="stat-icon"><svg class="icon"><use href="/images/icons.svg#icon-group"></use></svg></span>
+                        <div>
+                            <div class="stat-value">&mdash;</div>
+                            <div class="stat-label">Total Users</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-icon"><svg class="icon"><use href="/images/icons.svg#icon-plane"></use></svg></span>
+                        <div>
+                            <div class="stat-value">&mdash;</div>
+                            <div class="stat-label">Total Trips</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-icon"><svg class="icon"><use href="/images/icons.svg#icon-route"></use></svg></span>
+                        <div>
+                            <div class="stat-value">&mdash;</div>
+                            <div class="stat-label">Shared Trips</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-icon"><svg class="icon"><use href="/images/icons.svg#icon-chart"></use></svg></span>
+                        <div>
+                            <div class="stat-value">&mdash;</div>
+                            <div class="stat-label">Reports</div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="page-header">
+                    <h1>Recent Users</h1>
+                </section>
+                <section class="empty-panel">
+                    <svg class="icon empty-panel-icon"><use href="/images/icons.svg#icon-group"></use></svg>
+                    <h2>No data to show yet</h2>
+                    <p class="empty-state">Registered travelers will be listed here once the Users feature is connected to MySQL.</p>
+                </section>
+            </main>
+        </div>
+    </div>
+    <script src="/js/auth.js"></script>
+</body>
+</html>

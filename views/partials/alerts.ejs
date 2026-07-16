@@ -1,0 +1,21 @@
+<%# Flash messages: pass in `errors` and `messages` arrays %>
+<% if (typeof errors !== 'undefined' && errors && errors.length > 0) { %>
+    <div class="alert alert-error" role="alert">
+        <ul class="alert-list">
+            <% errors.forEach(function (err) { %>
+                <li><%= err %></li>
+            <% }); %>
+        </ul>
+        <button type="button" class="alert-close" aria-label="Dismiss">&times;</button>
+    </div>
+<% } %>
+<% if (typeof messages !== 'undefined' && messages && messages.length > 0) { %>
+    <div class="alert alert-success" role="status">
+        <ul class="alert-list">
+            <% messages.forEach(function (msg) { %>
+                <li><%= msg %></li>
+            <% }); %>
+        </ul>
+        <button type="button" class="alert-close" aria-label="Dismiss">&times;</button>
+    </div>
+<% } %>

@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Noxelle Travel — Your journey, our priority.</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <%- include('partials/navbar') %>
+
+    <main>
+        <%- include('partials/alerts') %>
+
+        <!-- HERO -->
+        <section class="hero sky">
+            <div class="hero-inner">
+                <div class="hero-window" aria-hidden="true">
+                    <span class="window-wing"></span>
+                </div>
+                <div class="hero-content">
+                    <h1 class="hero-title">Your journey,<br>our priority.</h1>
+                    <p class="hero-sub">Plan smarter. Travel better. Explore more.</p>
+                    <div class="hero-actions">
+                        <a class="btn btn-primary btn-lg" href="<%= user ? (user.role === 'admin' ? '/admin' : '/dashboard') : '/register' %>">
+                            <svg class="icon"><use href="/images/icons.svg#icon-plane"></use></svg>Plan Your Trip</a>
+                        <a class="btn btn-white btn-lg" href="#destinations">Explore Destinations</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- FEATURE STRIP -->
+        <section class="feature-strip" id="how-it-works">
+            <div class="feature-card">
+                <svg class="icon feature-icon"><use href="/images/icons.svg#icon-plane"></use></svg>
+                <h3>Plan Trips</h3>
+                <p>Organize your flights, stays and activities.</p>
+            </div>
+            <div class="feature-card">
+                <svg class="icon feature-icon"><use href="/images/icons.svg#icon-route"></use></svg>
+                <h3>Itinerary</h3>
+                <p>Build day-by-day travel itineraries.</p>
+            </div>
+            <div class="feature-card">
+                <svg class="icon feature-icon"><use href="/images/icons.svg#icon-wallet"></use></svg>
+                <h3>Budget</h3>
+                <p>Track expenses and stay on budget.</p>
+            </div>
+            <div class="feature-card">
+                <svg class="icon feature-icon"><use href="/images/icons.svg#icon-suitcase"></use></svg>
+                <h3>Packing List</h3>
+                <p>Pack smart with custom checklists.</p>
+            </div>
+        </section>
+
+        <!-- SEARCH PANEL (visual preview — search is handled by the trips feature) -->
+        <section class="search-panel-wrap">
+            <div class="search-panel">
+                <div class="search-field">
+                    <label for="search-destination"><svg class="icon"><use href="/images/icons.svg#icon-pin"></use></svg>Destination</label>
+                    <input id="search-destination" type="text" placeholder="Where to next?" disabled>
+                </div>
+                <div class="search-field">
+                    <label for="search-checkin"><svg class="icon"><use href="/images/icons.svg#icon-calendar"></use></svg>Check-in</label>
+                    <input id="search-checkin" type="date" disabled>
+                </div>
+                <div class="search-field">
+                    <label for="search-checkout"><svg class="icon"><use href="/images/icons.svg#icon-calendar"></use></svg>Check-out</label>
+                    <input id="search-checkout" type="date" disabled>
+                </div>
+                <div class="search-field">
+                    <label for="search-travelers"><svg class="icon"><use href="/images/icons.svg#icon-group"></use></svg>Travelers</label>
+                    <input id="search-travelers" type="number" min="1" placeholder="1" disabled>
+                </div>
+                <button type="button" class="btn btn-primary search-btn" disabled>Search</button>
+            </div>
+            <p class="search-note">Destination search launches with the My Trips feature — register to be ready for take-off.</p>
+        </section>
+
+        <!-- POPULAR DESTINATIONS -->
+        <section class="section" id="destinations">
+            <h2 class="section-title">Popular Destinations</h2>
+            <p class="section-sub">Places our travelers keep coming back to.</p>
+            <div class="card-grid">
+                <article class="dest-card">
+                    <div class="dest-visual" aria-hidden="true"><svg class="icon"><use href="/images/icons.svg#icon-plane"></use></svg></div>
+                    <div class="dest-body">
+                        <h3><svg class="icon"><use href="/images/icons.svg#icon-pin"></use></svg>Bali, Indonesia</h3>
+                        <p>Rice terraces, beach clubs and island sunsets.</p>
+                    </div>
+                </article>
+                <article class="dest-card">
+                    <div class="dest-visual dest-visual-sunset" aria-hidden="true"><svg class="icon"><use href="/images/icons.svg#icon-globe"></use></svg></div>
+                    <div class="dest-body">
+                        <h3><svg class="icon"><use href="/images/icons.svg#icon-pin"></use></svg>Tokyo, Japan</h3>
+                        <p>Spring blossoms, temples and world-class food.</p>
+                    </div>
+                </article>
+                <article class="dest-card">
+                    <div class="dest-visual dest-visual-dusk" aria-hidden="true"><svg class="icon"><use href="/images/icons.svg#icon-compass"></use></svg></div>
+                    <div class="dest-body">
+                        <h3><svg class="icon"><use href="/images/icons.svg#icon-pin"></use></svg>London, UK</h3>
+                        <p>Museums, markets and a skyline full of stories.</p>
+                    </div>
+                </article>
+            </div>
+        </section>
+    </main>
+
+    <%- include('partials/footer') %>
+    <script src="/js/auth.js"></script>
+</body>
+</html>
