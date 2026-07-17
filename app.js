@@ -142,7 +142,7 @@ const checkAdmin = (req, res, next) => {
 // Public routes
 // ==================================================
 app.get('/', (req, res) => {
-    res.render('home', {
+    res.render('index', {
         messages: req.flash('success'),
         errors: req.flash('error')
     });
@@ -270,7 +270,7 @@ app.post('/login', (req, res) => {
 // service, the link is printed in the SERVER CONSOLE (never shown in
 // the browser, so nobody can reset another person's account).
 app.get('/forgot-password', (req, res) => {
-    res.render('forgot-password', {
+    res.render('forgot_password', {
         messages: req.flash('success'),
         errors: req.flash('error')
     });
@@ -326,7 +326,7 @@ app.get('/reset-password/:token', (req, res) => {
             req.flash('error', 'This reset link is invalid or has expired. Please request a new one.');
             return res.redirect('/forgot-password');
         }
-        res.render('reset-password', {
+        res.render('reset_password', {
             token: req.params.token,
             messages: req.flash('success'),
             errors: req.flash('error')
@@ -390,7 +390,7 @@ app.post('/logout', (req, res) => {
 // connect them to MySQL. No fake data is hardcoded.
 // ==================================================
 app.get('/dashboard', checkAuthenticated, (req, res) => {
-    res.render('dashboard', {
+    res.render('user', {
         messages: req.flash('success'),
         errors: req.flash('error')
     });
