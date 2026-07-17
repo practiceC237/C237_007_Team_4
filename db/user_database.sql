@@ -3,11 +3,11 @@
 -- by app.js for registration, login, admin access and password reset.
 -- =============================================================
 
-CREATE DATABASE IF NOT EXISTS noxelle_travel
+CREATE DATABASE IF NOT EXISTS c237_007_team4_travelplanner
     CHARACTER SET utf8mb4
     COLLATE utf8mb4_unicode_ci;
 
-USE noxelle_travel;
+USE c237_007_team4_travelplanner;
 
 -- -------------------------------------------------------------
 -- Users

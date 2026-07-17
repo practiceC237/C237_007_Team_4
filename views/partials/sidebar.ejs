@@ -4,35 +4,11 @@
         <nav class="sidebar-nav">
             <a href="/admin" class="side-link <%= active === '/admin' ? 'active' : '' %>">
                 <svg class="icon"><use href="/images/icons.svg#icon-compass"></use></svg>Dashboard</a>
-            <a href="/admin/users" class="side-link <%= active === '/admin/users' ? 'active' : '' %>">
-                <svg class="icon"><use href="/images/icons.svg#icon-group"></use></svg>Users</a>
-            <a href="/admin/trips" class="side-link <%= active === '/admin/trips' ? 'active' : '' %>">
-                <svg class="icon"><use href="/images/icons.svg#icon-plane"></use></svg>Trips</a>
-            <a href="/admin/shared-trips" class="side-link <%= active === '/admin/shared-trips' ? 'active' : '' %>">
-                <svg class="icon"><use href="/images/icons.svg#icon-route"></use></svg>Shared Trips</a>
-            <a href="/admin/reports" class="side-link <%= active === '/admin/reports' ? 'active' : '' %>">
-                <svg class="icon"><use href="/images/icons.svg#icon-chart"></use></svg>Reports</a>
-            <a href="/admin/settings" class="side-link <%= active === '/admin/settings' ? 'active' : '' %>">
-                <svg class="icon"><use href="/images/icons.svg#icon-gear"></use></svg>Settings</a>
         </nav>
     <% } else { %>
         <nav class="sidebar-nav">
             <a href="/dashboard" class="side-link <%= active === '/dashboard' ? 'active' : '' %>">
                 <svg class="icon"><use href="/images/icons.svg#icon-compass"></use></svg>Dashboard</a>
-            <a href="/trips" class="side-link <%= active === '/trips' ? 'active' : '' %>">
-                <svg class="icon"><use href="/images/icons.svg#icon-plane"></use></svg>My Trips</a>
-            <a href="/itinerary" class="side-link <%= active === '/itinerary' ? 'active' : '' %>">
-                <svg class="icon"><use href="/images/icons.svg#icon-route"></use></svg>Itinerary</a>
-            <a href="/budget" class="side-link <%= active === '/budget' ? 'active' : '' %>">
-                <svg class="icon"><use href="/images/icons.svg#icon-wallet"></use></svg>Budget</a>
-            <a href="/expenses" class="side-link <%= active === '/expenses' ? 'active' : '' %>">
-                <svg class="icon"><use href="/images/icons.svg#icon-receipt"></use></svg>Expenses</a>
-            <a href="/packing-list" class="side-link <%= active === '/packing-list' ? 'active' : '' %>">
-                <svg class="icon"><use href="/images/icons.svg#icon-suitcase"></use></svg>Packing Lists</a>
-            <a href="/shared-trips" class="side-link <%= active === '/shared-trips' ? 'active' : '' %>">
-                <svg class="icon"><use href="/images/icons.svg#icon-group"></use></svg>Shared Trips</a>
-            <a href="/profile" class="side-link <%= active === '/profile' ? 'active' : '' %>">
-                <svg class="icon"><use href="/images/icons.svg#icon-passport"></use></svg>Profile</a>
         </nav>
     <% } %>
 

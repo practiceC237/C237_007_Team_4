@@ -1,7 +1,4 @@
 // ==================================================
-// Noxelle Travel — app.js
-// Explore where the city glows.
-//
 // My assigned part (Authentication & Authorisation):
 // Registration -> validation -> bcrypt hash -> MySQL insert
 // -> Login -> session -> checkAuthenticated -> checkAdmin
@@ -386,37 +383,11 @@ app.post('/logout', (req, res) => {
 
 // ==================================================
 // Traveler routes (protected by checkAuthenticated)
-// The feature pages below are shells — teammates will
-// connect them to MySQL. No fake data is hardcoded.
 // ==================================================
 app.get('/dashboard', checkAuthenticated, (req, res) => {
     res.render('user', {
         messages: req.flash('success'),
         errors: req.flash('error')
-    });
-});
-
-const travelerPages = [
-    { path: '/trips',        title: 'My Trips',     icon: 'plane',    blurb: 'Your upcoming and past trips will appear here.' },
-    { path: '/itinerary',    title: 'Itinerary',    icon: 'route',    blurb: 'Day-by-day plans for each trip will appear here.' },
-    { path: '/budget',       title: 'Budget',       icon: 'wallet',   blurb: 'Trip budgets will appear here.' },
-    { path: '/expenses',     title: 'Expenses',     icon: 'receipt',  blurb: 'Recorded expenses will appear here.' },
-    { path: '/packing-list', title: 'Packing List', icon: 'suitcase', blurb: 'Packing checklists for each trip will appear here.' },
-    { path: '/shared-trips', title: 'Shared Trips', icon: 'group',    blurb: 'Group trips shared with you will appear here.' },
-    { path: '/profile',      title: 'Profile',      icon: 'passport', blurb: 'Your traveler profile details will appear here.' }
-];
-
-travelerPages.forEach((page) => {
-    app.get(page.path, checkAuthenticated, (req, res) => {
-        res.render('placeholder', {
-            pageTitle: page.title,
-            icon: page.icon,
-            blurb: page.blurb,
-            area: 'traveler',
-            active: page.path,
-            messages: req.flash('success'),
-            errors: req.flash('error')
-        });
     });
 });
 
@@ -430,31 +401,6 @@ app.get('/admin', checkAuthenticated, checkAdmin, (req, res) => {
     });
 });
 
-const adminPages = [
-    { path: '/admin/users',        title: 'Users',        icon: 'group',    blurb: 'Registered travelers will be listed here.' },
-    { path: '/admin/trips',        title: 'Trips',        icon: 'plane',    blurb: 'All trips will be listed here.' },
-    { path: '/admin/shared-trips', title: 'Shared Trips', icon: 'route',    blurb: 'Shared group trips will be listed here.' },
-    { path: '/admin/reports',      title: 'Reports',      icon: 'receipt',  blurb: 'Reports will be generated here.' },
-    { path: '/admin/settings',     title: 'Settings',     icon: 'compass',  blurb: 'Application settings will appear here.' }
-];
-
-adminPages.forEach((page) => {
-    app.get(page.path, checkAuthenticated, checkAdmin, (req, res) => {
-        res.render('placeholder', {
-            pageTitle: page.title,
-            icon: page.icon,
-            blurb: page.blurb,
-            area: 'admin',
-            active: page.path,
-            messages: req.flash('success'),
-            errors: req.flash('error')
-        });
-    });
-});
-
-// ==================================================
-// Start the server
-// ==================================================
 app.listen(port, () => {
     console.log('Noxelle Travel running at http://localhost:' + port);
 });
