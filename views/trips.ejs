@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>My Trips: Noxelle Travel</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="app-body">
+    <%- include('partials/apptopbar') %>
+    <div class="app-shell">
+        <%- include('partials/sidebar',{area: 'traveler', active: '/trips'}) %>
+        <div class="app-main">
+            <main class="app-content">
+                <h1>My Trips</h1>
+                <a href="/trips/new"> Add a New Trip</a>
+                <ul>
+                    <% trips.forEach(function(trip){%>
+                    <li><a href="/trips/<%= trip.tripId %>"><%= trip.tripName %></a> <%= trip.destination %> (<%= trip.status %>)</li>
+                    <% }); %>
+                </ul>
+            </main>
+        </div>
+    </div>
+</body>
+    
+</html>
+
