@@ -158,7 +158,7 @@ app.get('/register', (req, res) => {
 app.post('/register', validateRegistration, (req, res) => {
     const { fullName, email, password } = req.body;
 
-    // 1. Check the email is not already registered (parameterised query)
+// 1. Check the email is not already registered (parameterised query)
     const checkSql = 'SELECT userId FROM users WHERE email = ?';
     db.query(checkSql, [email], (err, results) => {
         if (err) {
@@ -195,6 +195,43 @@ app.post('/register', validateRegistration, (req, res) => {
         });
     });
 });
+
+app.get('/trips', checkAuthenticated, (req,res)=> {
+    const userId = req.session.user.userId;
+    db.query('SELECT * FROM trips WHERE userId = ?', [userId],(err,results)=>{
+        if (err) return res.send('Error loading trips');
+        res.render('trips',{trips:results});
+    });
+
+});
+app.get('/trips/new', checkAuthenticated, (req,res)=>{
+    res.render('Newtrip');
+});
+
+app.post('/trips', checkAuthenticated, (req,res)=>{
+   const userId = req.session.user.userId;
+    const tripName = req.body.tripName;
+    const destination= req.body.destination;
+    const startDate = req.body.startDate;
+    const endDate = req.body.endDate;
+    const status = req.body.status;
+    const image = req.body.image;
+    
+
+    db.query(
+        'INSERT INTO trips (userId,tripName, destination, startDate, endDate, status,image) VALUES (?,?,?,?,?,?,?)',
+        [userId,tripName, destination, startDate,endDate,status,image],
+        (err, result) => {
+            if(err) {
+                console.log(err);
+                return res.send('Error saving trip');
+            }
+            res.redirect('/trips');
+        }
+    );
+    
+});
+
 
 // ---------- Login ----------
 app.get('/login', (req, res) => {
