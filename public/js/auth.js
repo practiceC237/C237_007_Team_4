@@ -1,5 +1,5 @@
 // ==================================================
-// Noxelle Travel — public/js/auth.js
+// JourneySpark Travel Planner — public/js/auth.js
 // Browser interactions only. All authentication,
 // authorisation and database logic stays in Express.
 // ==================================================

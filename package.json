@@ -1,7 +1,7 @@
 {
-  "name": "noxelle-travel",
+  "name": "journeyspark-travel-planner",
   "version": "1.0.0",
-  "description": "Noxelle Travel - Explore where the city glows.",
+  "description": "JourneySpark Travel Planner : Plan the Journey. Spark the Adventure.",
   "main": "app.js",
   "scripts": {
     "start": "node app.js",

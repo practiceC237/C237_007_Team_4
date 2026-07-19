@@ -402,5 +402,5 @@ app.get('/admin', checkAuthenticated, checkAdmin, (req, res) => {
 });
 
 app.listen(port, () => {
-    console.log('Noxelle Travel running at http://localhost:' + port);
+    console.log('JourneySpark Travel Planner running at http://localhost:' + port);
 });
