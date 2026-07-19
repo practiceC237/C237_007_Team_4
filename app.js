@@ -217,12 +217,14 @@ app.post('/trips', checkAuthenticated, (req,res)=>{
     const destination= req.body.destination;
     const startDate = req.body.startDate;
     const endDate = req.body.endDate;
+    const status = req.body.status;
+    const image = req.body.image;
     
 
     db.query(
-        'INSERT INTO trips (userId,tripName, destination, startDate, endDate) VALUES (?,?,?,?,?)',
-        [userId,tripName, destination, startDate,endDate],
-        (err,result) =>{
+        'INSERT INTO trips (userId,tripName, destination, startDate, endDate, status,image) VALUES (?,?,?,?,?,?,?)',
+        [userId,tripName, destination, startDate,endDate,status,image],
+        (err, result) => {
             if(err) {
                 console.log(err);
                 return res.send('Error saving trip');

@@ -13,15 +13,32 @@
             <main class="app-content">
                 <h1>My Trips</h1>
                 <a href="/trips/new"> Add a New Trip</a>
-                <ul>
-                    <% trips.forEach(function(trip){%>
-                    <li><a href="/trips/<%= trip.tripId %>"><%= trip.tripName %></a> <%= trip.destination %> (<%= trip.status %>)</li>
-                    <% }); %>
-                </ul>
+
+                <% if (trips.length > 0) {%>
+                    <% trips.forEach(function(trip){ %>
+                    <div class ="trip-card">
+                        <h2>
+                            <a href="/trips/<%= trip.tripId %>">
+                                <%= trip.tripName %>
+                            </a>
+                        </h2>
+                        <p>Destination: <%= trip.destination %></p>
+                        <p>Start Date: <%= new Date (trip.startDate).toLocaleDateString() %></p>
+                        <p>End Date: <%= new Date (trip.endDate).toLocaleDateString() %></p>
+                        <p>Status: <%=trip.status %></p>
+
+                        <% if (trip.image) { %>
+                        <img src="/images/<%= trip.image %>" alt ="<%= trip.tripName %>" width="180">
+                        <% } %>
+                    </div>
+               <% }) %>
+               <% } else {%>}
+               <p>No Trip found.</p>
+
+               <% } %>
             </main>
-        </div>
+            </div> 
     </div>
 </body>
-    
 </html>
 
