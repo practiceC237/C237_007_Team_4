@@ -12,7 +12,9 @@ USE c237_007_team4_travelplanner;
 -- -------------------------------------------------------------
 -- Users
 -- Public registration creates a traveler account.
--- Admin accounts are created separately using create-admin.js.
+-- Admin accounts are never created through the registration form —
+-- register normally, then promote the account manually:
+--   UPDATE users SET role = 'admin' WHERE email = 'someone@example.com';
 -- Passwords are stored only as bcrypt hashes.
 -- -------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS users (
