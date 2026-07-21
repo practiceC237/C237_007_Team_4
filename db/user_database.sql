@@ -11,10 +11,8 @@ USE c237_007_team4_travelplanner;
 
 -- -------------------------------------------------------------
 -- Users
--- Public registration creates a traveler account.
--- Admin accounts are never created through the registration form —
--- register normally, then promote the account manually:
---   UPDATE users SET role = 'admin' WHERE email = 'someone@example.com';
+-- Website only can registration a traveler account.
+-- Admin accounts are created using mysql database.
 -- Passwords are stored only as bcrypt hashes.
 -- -------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS users (
