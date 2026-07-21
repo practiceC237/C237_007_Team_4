@@ -142,13 +142,26 @@ Library-System/
 │
 ├── public/
 │     ├── css/
+│        └── style.css/
 │     ├── js/
+│        └── 
 │     └── images/
+│        └── icons.svg/
 │
 ├── views/
 │     └── partials/
 │           ├── navbar.ejs
 │           └── footer.ejs
+│           └── .ejs
+│           └── .ejs
+│           └── .ejs
+│     └── admin.ejs
+│     └── forgot_password.ejs
+│     └── index.ejs
+│     └── login.ejs
+│     └── register.ejs
+│     └── reset_password.ejs
+│     └── user.ejs
 │
 ├── features/
 │
@@ -164,8 +177,8 @@ Library-System/
 │
 │     └── SharedTripsAdmin (Hao Jun)/
 │
-└── database/
-       └── schema.sql
+└── db/
+       └── user_database.sql
 
 Notes:
 - Only work inside your assigned feature folder.
