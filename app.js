@@ -60,8 +60,8 @@ app.use(session({
     resave: false,
     saveUninitialized: false,
     cookie: {
-        httpOnly: true,                                 // JS in the browser cannot read the cookie
-        sameSite: 'lax',                                // basic CSRF protection
+        httpOnly: true,                                  // JS in the browser cannot read the cookie
+        sameSite: 'lax',                                 // basic CSRF protection
         secure: process.env.NODE_ENV === 'production',   // HTTPS-only cookie in production
         maxAge: 1000 * 60 * 60 * 24                      // session expires after 1 day
     }
@@ -388,49 +388,6 @@ app.get('/dashboard', checkAuthenticated, (req, res) => {
     res.render('user', {
         messages: req.flash('success'),
         errors: req.flash('error')
-    });
-});
-
-// ---------- Budget routes ----------
-app.get('/budget', checkAuthenticated, (req, res) => {
-    const userId = req.session.user.userId;
-    const sql = 'SELECT * FROM budget WHERE userId = ?';
-    db.query(sql, [userId], (err, results) => {
-        if (err) {
-            console.error(err);
-            req.flash('error', 'Unable to fetch budget items.');
-            return res.render('budget', {
-                expenses: [],
-                messages: req.flash('success'),
-                errors: req.flash('error')
-            });
-        }
-        res.render('budget', {
-            expenses: results,
-            messages: req.flash('success'),
-            errors: req.flash('error')
-        });
-    });
-});
-
-app.post('/budget', checkAuthenticated, (req, res) => {
-    const { description, amount } = req.body;
-    const userId = req.session.user.userId;
-
-    if (!description || !amount) {
-        req.flash('error', 'Please provide both description and amount.');
-        return res.redirect('/budget');
-    }
-
-    const sql = 'INSERT INTO budget (userId, description, amount) VALUES (?, ?, ?)';
-    db.query(sql, [userId, description, amount], (err) => {
-        if (err) {
-            console.error(err);
-            req.flash('error', 'Failed to add budget item.');
-            return res.redirect('/budget');
-        }
-        req.flash('success', 'Budget item added successfully!');
-        res.redirect('/budget');
     });
 });
 
