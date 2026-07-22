@@ -15,8 +15,8 @@ const flash = require('connect-flash');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 
-// Import Shu Koon's Itinerary Router
-const itineraryRoutes = require('./routes/itinerary');
+// // Import Shu Koon's Itinerary Router
+// const itineraryRoutes = require('./routes/itinerary');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -394,9 +394,9 @@ app.get('/dashboard', checkAuthenticated, (req, res) => {
     });
 });
 
-// Itinerary & Activity Management (Shu Koon) — every route below is
-// protected inside routes/itinerary.js (login required + must own the trip)
-app.use('/trips/:tripId/itinerary', itineraryRoutes(db, checkAuthenticated));
+// // Itinerary & Activity Management (Shu Koon) — every route below is
+// // protected inside routes/itinerary.js (login required + must own the trip)
+// app.use('/trips/:tripId/itinerary', itineraryRoutes(db, checkAuthenticated));
 
 // ==================================================
 // Admin routes (checkAuthenticated + checkAdmin)
