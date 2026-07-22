@@ -1775,3 +1775,12 @@ tbody tr:hover {
         overflow-x: hidden;
     }
 }
+
+/* back button floating in the bottom left corner of the screen */
+.btn-floating-back {
+    position: fixed;
+    top: 70px; /* Or top: 20px */
+    left: 20px;
+    z-index: 1000; /* Keeps it above other elements */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15); /* Optional: gives it a elevated pop */
+}

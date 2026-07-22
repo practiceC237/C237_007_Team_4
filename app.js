@@ -31,11 +31,11 @@ const port = process.env.PORT || 3000;
 // when using the Azure database (leave it out for localhost).
 // ==================================================
 const db = mysql.createConnection({
-    host: process.env.DB_HOST ,
-    port: process.env.DB_PORT ,
-    user: process.env.DB_USER ,
-    password: process.env.DB_PASSWORD ,
-    database: process.env.DB_NAME ,
+    host: process.env.DB_HOST,
+    port: process.env.DB_PORT,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
     ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: true } : undefined
 });
 
@@ -48,19 +48,17 @@ db.connect((err) => {
     }
 });
 
-// Keep the app alive and log the reason if the connection drops later
 db.on('error', (err) => {
     console.error('MySQL connection error:', err.message);
 });
 
 // ==================================================
-// App setup
+// App Setup
 // ==================================================
 app.set('view engine', 'ejs');
 app.use(express.urlencoded({ extended: false }));
 app.use(express.static('public'));
 
-// Session middleware (Lesson 19, hardened for deployment)
 app.use(session({
     secret: process.env.SESSION_SECRET || 'dev-only-secret-change-me',
     resave: false,
@@ -75,29 +73,17 @@ app.use(session({
 
 app.use(flash());
 
-// Make the logged-in user available to every EJS page
 app.use((req, res, next) => {
     res.locals.user = req.session.user || null;
     next();
 });
 
 // ==================================================
-// Middleware: validation, authentication, authorisation
+// Middleware
 // ==================================================
+const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
+const passwordRequirementsMessage = 'Password must contain at least 8 characters, including one uppercase letter, one lowercase letter, one number and one symbol.';
 
-// Password strength: at least 8 characters, one uppercase, one lowercase,
-// one number and one symbol. Enforced here (server-side) for both
-// registration and password reset — never relying on the HTML
-// `minlength`/`required` attributes alone, since those can be bypassed.
-const strongPasswordRegex =
-    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
-const passwordRequirementsMessage =
-    'Password must contain at least 8 characters, including one uppercase letter, one lowercase letter, one number and one symbol.';
-
-// Server-side validation for the registration form
-// Public registration never accepts a role from the browser — every
-// account created here is a traveler. Admin accounts are promoted
-// manually (SQL), never through this form.
 const validateRegistration = (req, res, next) => {
     const { fullName, password, confirmPassword } = req.body;
     const email = (req.body.email || '').trim().toLowerCase();
@@ -113,16 +99,14 @@ const validateRegistration = (req, res, next) => {
 
     if (errors.length > 0) {
         req.flash('error', errors);
-        // Preserve only full name and email — never the passwords
         req.flash('formData', { fullName, email });
         return res.redirect('/register');
     }
 
-    req.body.email = email; // pass the cleaned email on to the route
+    req.body.email = email;
     next();
 };
 
-// Authentication: is the user logged in? (Lesson 19)
 const checkAuthenticated = (req, res, next) => {
     if (req.session.user) {
         return next();
@@ -138,11 +122,11 @@ const checkAdmin = (req, res, next) => {
         return next();
     }
     req.flash('error', "You don't have permission to access that page.");
-    res.redirect('/dashboard');
+    res.redirect('/');
 };
 
 // ==================================================
-// Public routes
+// Public Routes
 // ==================================================
 app.get('/', (req, res) => {
     res.render('index', {
@@ -164,7 +148,6 @@ app.get('/register', (req, res) => {
 app.post('/register', validateRegistration, (req, res) => {
     const { fullName, email, password } = req.body;
 
-// 1. Check the email is not already registered (parameterised query)
     const checkSql = 'SELECT userId FROM users WHERE email = ?';
     db.query(checkSql, [email], (err, results) => {
         if (err) {
@@ -178,7 +161,6 @@ app.post('/register', validateRegistration, (req, res) => {
             return res.redirect('/register');
         }
 
-        // 2. Hash the password with bcrypt (never store plain text)
         bcrypt.hash(password, 10, (hashErr, passwordHash) => {
             if (hashErr) {
                 console.error(hashErr);
@@ -186,9 +168,7 @@ app.post('/register', validateRegistration, (req, res) => {
                 return res.redirect('/register');
             }
 
-            // 3. Insert the new user — always as a traveler. Admin accounts
-            // are never created through public registration.
-            const insertSql = 'INSERT INTO users (fullName, email, passwordHash, role) VALUES (?, ?, ?, \'traveler\')';
+            const insertSql = 'INSERT INTO users (fullName, email, passwordHash, role, totalBudget) VALUES (?, ?, ?, \'traveler\', 1000.00)';
             db.query(insertSql, [fullName.trim(), email, passwordHash], (insertErr) => {
                 if (insertErr) {
                     console.error(insertErr);
@@ -559,8 +539,6 @@ app.post('/login', (req, res) => {
         return res.redirect('/login');
     }
 
-    // Look up the user by email only — the bcrypt compare happens in Node,
-    // never in the SQL query.
     const sql = 'SELECT * FROM users WHERE email = ?';
     db.query(sql, [email], (err, results) => {
         if (err) {
@@ -569,7 +547,6 @@ app.post('/login', (req, res) => {
             return res.redirect('/login');
         }
 
-        // Same message whether the email or the password is wrong
         if (results.length === 0) {
             req.flash('error', 'Invalid email or password');
             return res.redirect('/login');
@@ -582,7 +559,6 @@ app.post('/login', (req, res) => {
                 return res.redirect('/login');
             }
 
-            // Regenerate the session ID after login (prevents session fixation)
             req.session.regenerate((regenErr) => {
                 if (regenErr) {
                     console.error(regenErr);
@@ -590,7 +566,6 @@ app.post('/login', (req, res) => {
                     return res.redirect('/login');
                 }
 
-                // Store only safe fields in the session — never the hash
                 req.session.user = {
                     userId: account.userId,
                     fullName: account.fullName,
@@ -598,20 +573,19 @@ app.post('/login', (req, res) => {
                     role: account.role
                 };
 
+                req.session.tripBudget = account.totalBudget ? Number(account.totalBudget) : 1000.00;
+
                 req.flash('success', 'Welcome back, ' + account.fullName + '!');
                 if (account.role === 'admin') {
                     return res.redirect('/admin');
                 }
-                res.redirect('/dashboard');
+                res.redirect('/');
             });
         });
     });
 });
 
-// ---------- Forgot password ----------
-// The user asks for a reset link. Because this project has no email
-// service, the link is printed in the SERVER CONSOLE (never shown in
-// the browser, so nobody can reset another person's account).
+// ---------- Forgot Password & Reset ----------
 app.get('/forgot-password', (req, res) => {
     res.render('forgot_password', {
         messages: req.flash('success'),
@@ -627,8 +601,6 @@ app.post('/forgot-password', (req, res) => {
         return res.redirect('/forgot-password');
     }
 
-    // Always show the same message whether or not the email exists,
-    // so the form cannot be used to discover registered accounts.
     const finish = () => {
         req.flash('success',
             'If that email is registered, a reset link has been generated. ' +
@@ -641,11 +613,9 @@ app.post('/forgot-password', (req, res) => {
             return finish();
         }
 
-        // Random token: the plain value goes into the link, only its
-        // SHA-256 hash is stored in the database (like a password).
         const token = crypto.randomBytes(32).toString('hex');
         const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
-        const expiry = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+        const expiry = new Date(Date.now() + 15 * 60 * 1000);
 
         const sql = 'UPDATE users SET resetTokenHash = ?, resetTokenExpiry = ? WHERE userId = ?';
         db.query(sql, [tokenHash, expiry, results[0].userId], (updateErr) => {
@@ -660,7 +630,6 @@ app.post('/forgot-password', (req, res) => {
     });
 });
 
-// ---------- Reset password (via the token link) ----------
 app.get('/reset-password/:token', (req, res) => {
     const tokenHash = crypto.createHash('sha256').update(req.params.token).digest('hex');
     const sql = 'SELECT userId FROM users WHERE resetTokenHash = ? AND resetTokenExpiry > NOW()';
@@ -688,7 +657,6 @@ app.post('/reset-password/:token', (req, res) => {
 
     if (errors.length > 0) {
         req.flash('error', errors);
-        // Redirecting back to the same token URL preserves it for the retry
         return res.redirect('/reset-password/' + req.params.token);
     }
 
@@ -705,7 +673,6 @@ app.post('/reset-password/:token', (req, res) => {
                 req.flash('error', 'Something went wrong. Please try again.');
                 return res.redirect('/reset-password/' + req.params.token);
             }
-            // Save the new hash and clear the token so the link is single-use
             const updateSql = 'UPDATE users SET passwordHash = ?, resetTokenHash = NULL, resetTokenExpiry = NULL WHERE userId = ?';
             db.query(updateSql, [passwordHash, results[0].userId], (updateErr) => {
                 if (updateErr) {
@@ -719,21 +686,177 @@ app.post('/reset-password/:token', (req, res) => {
     });
 });
 
-// ---------- Logout (POST so a link cannot fake it) ----------
+// ---------- Logout ----------
 app.post('/logout', (req, res) => {
     req.session.destroy(() => {
-        res.clearCookie('connect.sid'); // remove the session cookie
+        res.clearCookie('connect.sid');
         res.redirect('/login');
     });
 });
 
 // ==================================================
-// Traveler routes (protected by checkAuthenticated)
+// Traveler / Budget Routes
 // ==================================================
-app.get('/dashboard', checkAuthenticated, (req, res) => {
-    res.render('user', {
-        messages: req.flash('success'),
-        errors: req.flash('error')
+
+// GET /budget
+app.get('/budget', checkAuthenticated, (req, res) => {
+    const userId = req.session.user.userId;
+    const editId = req.query.editId || null;
+
+    const userSql = 'SELECT totalBudget FROM users WHERE userId = ?';
+    db.query(userSql, [userId], (userErr, userResults) => {
+        const savedBudget = (!userErr && userResults.length > 0) ? Number(userResults[0].totalBudget) : (req.session.tripBudget || 1000.00);
+        req.session.tripBudget = savedBudget;
+
+        const expensesSql = 'SELECT * FROM budget WHERE userId = ?';
+        db.query(expensesSql, [userId], (err, expensesResults) => {
+            if (err) {
+                console.error('MySQL Select Expenses Error:', err);
+                req.flash('error', 'Unable to fetch budget items.');
+                return res.render('budget', {
+                    expenses: [],
+                    categoryBreakdown: [],
+                    totalSpent: 0,
+                    editingExpense: null,
+                    trip: { totalBudget: savedBudget },
+                    messages: req.flash('success'),
+                    errors: req.flash('error')
+                });
+            }
+
+            const categorySql = 'SELECT category, SUM(amount) AS total FROM budget WHERE userId = ? GROUP BY category';
+            db.query(categorySql, [userId], (catErr, categoryResults) => {
+                const totalSpent = expensesResults.reduce((sum, item) => sum + Number(item.amount || item.Amount || 0), 0);
+                
+                let editingExpense = null;
+                if (editId) {
+                    editingExpense = expensesResults.find(e => 
+                        String(e.expenseId || e.budgetid || e.id) === String(editId)
+                    ) || null;
+                }
+
+                res.render('budget', {
+                    expenses: expensesResults,
+                    categoryBreakdown: catErr ? [] : categoryResults,
+                    totalSpent: totalSpent,
+                    editingExpense: editingExpense,
+                    trip: { totalBudget: savedBudget },
+                    messages: req.flash('success'),
+                    errors: req.flash('error')
+                });
+            });
+        });
+    });
+});
+
+// POST /budget/set-trip-budget
+app.post('/budget/set-trip-budget', checkAuthenticated, (req, res) => {
+    const { totalBudget } = req.body;
+    const userId = req.session.user.userId;
+
+    if (totalBudget && Number(totalBudget) > 0) {
+        const newBudget = Number(totalBudget);
+        const sql = 'UPDATE users SET totalBudget = ? WHERE userId = ?';
+        
+        db.query(sql, [newBudget, userId], (err) => {
+            if (err) {
+                console.error('MySQL Update Budget Error:', err);
+                req.flash('error', 'Failed to update trip budget in database.');
+            } else {
+                req.session.tripBudget = newBudget;
+                req.flash('success', 'Total trip budget updated successfully!');
+            }
+            res.redirect('/budget');
+        });
+    } else {
+        req.flash('error', 'Please enter a valid budget amount greater than 0.');
+        res.redirect('/budget');
+    }
+});
+
+// POST /budget/add
+app.post(['/budget', '/budget/add'], checkAuthenticated, (req, res) => {
+    const { description, amount, category, expenseDate } = req.body;
+    const userId = req.session.user.userId;
+
+    if (!description || !amount) {
+        req.flash('error', 'Please provide both description and amount.');
+        return res.redirect('/budget#expense-history');
+    }
+
+    const sql = 'INSERT INTO budget (userId, description, amount, category, expenseDate) VALUES (?, ?, ?, ?, ?)';
+    const selectedCategory = category ? category.trim() : 'Other';
+    const selectedDate = expenseDate || new Date();
+
+    db.query(sql, [userId, description, Number(amount), selectedCategory, selectedDate], (err) => {
+        if (err) {
+            console.error('MySQL Insert Error:', err);
+            req.flash('error', 'Failed to add budget item.');
+            return res.redirect('/budget#expense-history');
+        }
+        req.flash('success', 'Budget item added successfully!');
+        res.redirect('/budget#expense-history');
+    });
+});
+
+// POST /budget/update/:id
+app.post('/budget/update/:id', checkAuthenticated, (req, res) => {
+    const editId = req.params.id;
+    const userId = req.session.user.userId;
+    const { description, amount, category, expenseDate } = req.body;
+
+    if (!description || !amount) {
+        req.flash('error', 'Please provide both description and amount.');
+        return res.redirect('/budget#expense-history');
+    }
+
+    const selectedCategory = category ? category.trim() : 'Other';
+    const selectedDate = expenseDate ? new Date(expenseDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+
+    const sqlExpenseId = 'UPDATE budget SET description = ?, amount = ?, category = ?, expenseDate = ? WHERE expenseId = ? AND userId = ?';
+    db.query(sqlExpenseId, [description, Number(amount), selectedCategory, selectedDate, editId, userId], (err, result) => {
+        if (err || (result && result.affectedRows === 0)) {
+            const sqlBudgetId = 'UPDATE budget SET description = ?, amount = ?, category = ?, expenseDate = ? WHERE budgetid = ? AND userId = ?';
+            db.query(sqlBudgetId, [description, Number(amount), selectedCategory, selectedDate, editId, userId], (err2) => {
+                if (err2) {
+                    console.error('MySQL Update Error:', err2);
+                    req.flash('error', 'Failed to update expense item.');
+                    return res.redirect('/budget#expense-history');
+                }
+                req.flash('success', 'Expense updated successfully!');
+                res.redirect('/budget#expense-history');
+            });
+            return;
+        }
+
+        req.flash('success', 'Expense updated successfully!');
+        res.redirect('/budget#expense-history');
+    });
+});
+
+// POST /budget/delete/:id
+app.post('/budget/delete/:id', checkAuthenticated, (req, res) => {
+    const editId = req.params.id;
+    const userId = req.session.user.userId;
+
+    const sqlExpenseId = 'DELETE FROM budget WHERE expenseId = ? AND userId = ?';
+    db.query(sqlExpenseId, [editId, userId], (err, result) => {
+        if (err || (result && result.affectedRows === 0)) {
+            const sqlBudgetId = 'DELETE FROM budget WHERE budgetid = ? AND userId = ?';
+            db.query(sqlBudgetId, [editId, userId], (err2) => {
+                if (err2) {
+                    console.error('MySQL Delete Error:', err2);
+                    req.flash('error', 'Failed to delete expense item.');
+                    return res.redirect('/budget#expense-history');
+                }
+                req.flash('success', 'Expense deleted successfully!');
+                res.redirect('/budget#expense-history');
+            });
+            return;
+        }
+
+        req.flash('success', 'Expense deleted successfully!');
+        res.redirect('/budget#expense-history');
     });
 });
 
@@ -742,7 +865,7 @@ app.get('/dashboard', checkAuthenticated, (req, res) => {
 // app.use('/trips/:tripId/itinerary', itineraryRoutes(db, checkAuthenticated));
 
 // ==================================================
-// Admin routes (checkAuthenticated + checkAdmin)
+// Admin Routes
 // ==================================================
 app.get('/admin', checkAuthenticated, checkAdmin, (req, res) => {
     res.render('admin', {
