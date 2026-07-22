@@ -17,6 +17,10 @@ const crypto = require('crypto');
 const multer = require('multer');
 
  
+
+// Import Shu Koon's Itinerary Router
+const itineraryRoutes = require('./routes/itinerary');
+
 const app = express();
 const port = process.env.PORT || 3000;
 
@@ -732,6 +736,10 @@ app.get('/dashboard', checkAuthenticated, (req, res) => {
         errors: req.flash('error')
     });
 });
+
+// Itinerary & Activity Management (Shu Koon) — every route below is
+// protected inside routes/itinerary.js (login required + must own the trip)
+app.use('/trips/:tripId/itinerary', itineraryRoutes(db, checkAuthenticated));
 
 // ==================================================
 // Admin routes (checkAuthenticated + checkAdmin)
