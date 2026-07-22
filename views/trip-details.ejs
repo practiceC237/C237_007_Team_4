@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>JourneySpark Travel Planner : Plan the Journey. Spark the Adventure.</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<%- include('partials/apptopbar') %>
+<div class="app-shell">
+     <%- include ('partials/sidebar',  { area: 'traveler', active:'/trips'}) %>
+     <div class="app-main">
+        <main class="app-content">
+        <h1><%=trip.tripName %></h1>
+        <p> Destination: <%=trip.destination %></p>
+        <p>Start: <%= new Date (trip.startDate).toLocaleDateString() %></p>
+        <p>End: <%= new Date(trip.endDate).toLocaleDateString() %></p>
+        <p>Status: <%=trip.status %></p>
+        <p>Image:
+            <br>
+            <% if (trip.image) { %>
+                
+                <img src="/images/<%= trip.image %> " alt="Image of the Trip" width="200"> 
+            <% } %>
+        
+        <br>
+
+        <a href="/trips/<%= trip.tripId %>/edit" class="btn btn-secondary">Edit Trip</a>
+
+        <br><br>
+
+        <a href="/trips/<%= trip.tripId %>/share" class="btn btn-info">Share Trip</a>
+        
+
+
+
+
+
+        <form action="/trips/<%= trip.tripId %>/delete" method="POST">
+            <button type="submit" onclick="return confirm('Do you want to delete this trip?')">Delete</button>
+        </form>
+        <br>
+        <a href="/trips" class="btn btn-secondary">Back</a>
+        </main>
+    </div>
+</div>
+</body>
+</html>
+    

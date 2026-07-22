@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Add Activity : <%= trip.title %> : JourneySpark Travel Planner</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="app-body">
+    <%- include('partials/apptopbar') %>
+
+    <div class="app-shell">
+        <%- include('partials/sidebar', { area: 'traveler', active: '/dashboard' }) %>
+
+        <div class="app-main">
+            <main class="app-content">
+                <%- include('partials/alerts') %>
+
+                <section class="page-header">
+                    <h1><svg class="icon"><use href="/images/icons.svg#icon-route"></use></svg> Add Activity</h1>
+                    <p class="empty-state">
+                        <%= trip.title %> &middot; must fall between
+                        <%= new Date(trip.startDate).toLocaleDateString() %> and <%= new Date(trip.endDate).toLocaleDateString() %>
+                    </p>
+                </section>
+
+                <div class="panel-card itinerary-form-card">
+                    <form action="/trips/<%= trip.tripId %>/itinerary/add" method="POST">
+                        <div class="form-group">
+                            <label for="title">Activity Title</label>
+                            <input type="text" id="title" name="title" class="form-control"
+                                   value="<%= formData.title || '' %>" placeholder="e.g. Visit Senso-ji Temple" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="category">Category</label>
+                            <select id="category" name="category" class="form-control" required>
+                                <% categories.forEach(function (c) { %>
+                                    <option value="<%= c %>" <%= formData.category === c ? 'selected' : '' %>><%= c %></option>
+                                <% }); %>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="activityDate">Date <span class="label-hint">(within the trip dates)</span></label>
+                            <input type="date" id="activityDate" name="activityDate" class="form-control"
+                                   value="<%= formData.activityDate || '' %>"
+                                   min="<%= new Date(trip.startDate).toISOString().slice(0,10) %>"
+                                   max="<%= new Date(trip.endDate).toISOString().slice(0,10) %>" required>
+                        </div>
+
+                        <div class="itinerary-time-row">
+                            <div class="form-group">
+                                <label for="startTime">Start Time</label>
+                                <input type="time" id="startTime" name="startTime" class="form-control"
+                                       value="<%= formData.startTime || '' %>" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="endTime">End Time</label>
+                                <input type="time" id="endTime" name="endTime" class="form-control"
+                                       value="<%= formData.endTime || '' %>" required>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="location">Location <span class="label-hint">(optional)</span></label>
+                            <input type="text" id="location" name="location" class="form-control"
+                                   value="<%= formData.location || '' %>" placeholder="e.g. Asakusa, Tokyo">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="notes">Notes <span class="label-hint">(optional)</span></label>
+                            <textarea id="notes" name="notes" class="form-control" rows="3"
+                                      placeholder="Booking reference, reminders, etc."><%= formData.notes || '' %></textarea>
+                        </div>
+
+                        <div class="itinerary-form-actions">
+                            <a class="btn btn-outline" href="/trips/<%= trip.tripId %>/itinerary">Cancel</a>
+                            <button type="submit" class="btn btn-primary">Add Activity</button>
+                        </div>
+                    </form>
+                </div>
+            </main>
+        </div>
+    </div>
+    <script src="/js/auth.js"></script>
+</body>
+</html>
