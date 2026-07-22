@@ -14,6 +14,7 @@ const session = require('express-session');
 const flash = require('connect-flash');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
+const multer = require('multer');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -195,6 +196,346 @@ app.post('/register', validateRegistration, (req, res) => {
         });
     });
 });
+
+const storage = multer.diskStorage(
+{
+    destination: function (req,file,cb)
+    {
+        cb(null, 'public/images/');
+    },
+
+    filename: function (req,file,cb)
+    {
+        cb(null, file.originalname);
+    }
+    
+});
+
+const upload = multer({
+    storage: storage
+});
+
+app.get('/trips', checkAuthenticated, (req,res)=> {
+    const userId = req.session.user.userId;
+    
+    const destination = req.query.destination;
+    const status = req.query.status;
+    
+
+    let sql = 'SELECT * FROM trips WHERE userId = ?';
+    let values= [userId];
+
+    if (destination){
+        sql +=' AND destination LIKE ?';
+        values.push('%' + destination +  '%');
+    }
+    if (status) {
+        sql +='AND status = ?';
+        values.push(status)
+    }
+   
+  
+
+    db.query(sql,values,(err,results) =>{
+        if(err)
+        {
+            return res.send('Error loading trips');
+        }
+        
+        res.render('trips',
+        {   
+            trips:results
+
+        });
+    });
+});
+    
+
+
+
+app.get('/trips/new', checkAuthenticated, (req,res)=>{
+    res.render('Newtrip',{
+        error:null
+    });
+});
+
+// It will goes to the trip.ejs page and check if the user is authenticated 
+// it will check for userId, tripName, destination, startDate and endDate
+
+app.post('/trips', checkAuthenticated, upload.single('image'), (req,res)=>{
+    console.log(req.body);
+   const userId = req.session.user.userId;
+    const tripName = req.body.tripName;
+    const destination= req.body.destination;
+    const startDate = req.body.startDate;
+    const endDate = req.body.endDate;
+    const image = req.file ? req.file.filename : null;
+
+    // Get today date
+    const today = new Date ();
+    today.setHours(0,0,0,0);
+    // Convert user's input into Dates
+    const start = new Date (startDate);
+    start.setHours(0,0,0,0);
+    const end = new Date (endDate);
+    end.setHours(0,0,0,0);
+
+    // Calculate the trip status
+    let status;
+    if (today < start) 
+    {
+        status = "Upcoming";
+    }
+    else if (today > end)
+    {
+        status = "Completed";
+    }
+    else 
+    {
+        status = "Ongoing";
+    }
+    console.log("Status:", status);
+
+    // Check for invalid Date and ensures that endDate is before the startDate.
+    if (end < start) 
+    {
+         return res.render('NewTrip',{
+            error: "End Date cannot be before the Start Date."
+
+    });
+
+    }
+        
+    db.query(
+        'INSERT INTO trips (userId,tripName, destination, startDate, endDate,status,image) VALUES (?,?,?,?,?,?,?)',
+        [userId,tripName, destination, startDate,endDate,status,image],
+        (err, result) => {
+            if(err) {
+                console.log(err);
+                return res.send('Error saving trip');
+            }
+            res.redirect('/trips');
+        }
+    );
+    
+});
+
+app.get('/trips/:id',checkAuthenticated,(req,res)=>{
+    const userId = req.session.user.userId;
+    const tripId = req.params.id;
+    db.query('SELECT * FROM trips WHERE tripId = ? AND userId = ?', [tripId, userId], (err,results)=>{
+    
+        if (err) return res.send('Error loading trip ');
+        if (results.length === 0) return res.send('Trip not found');
+        res.render('trip-details',{trip: results[0]});
+
+    });
+})
+app.post('/trips/:id/delete', checkAuthenticated,(req,res)=>{
+    // Which user?
+    const userId = req.session.user.userId;
+    //Which trip ?
+    const tripId = req.params.id;
+    db.query('DELETE FROM trips WHERE tripId = ? AND userId = ?', [tripId, userId],(err) =>{
+        if(err) return res.send('Error deleting');
+        res.redirect('/trips');
+    });
+});
+app.get('/trips/:id/edit',checkAuthenticated,(req,res)=>{
+    const userId = req.session.user.userId;
+    const tripId = req.params.id;
+    console.log('Trip ID:',tripId);
+    console.log('User ID:',userId);
+
+    db.query('SELECT * FROM trips WHERE tripId = ? AND userId = ?',[tripId, userId],(err,results)=>{
+        if (err) 
+            {
+                return res.send('Error loading trips');
+            }
+        if (results.length === 0)
+        {   
+            return res.send('Trip not found');
+
+        }
+    
+        res.render('EditTrip', {trip:results[0]});
+    });
+});
+app.post('/trips/:id/edit',checkAuthenticated,(req,res)=>{
+
+    const userId = req.session.user.userId;
+    const tripId = req.params.id;
+    const tripName = req.body.tripName;
+    const destination= req.body.destination;
+    const startDate = req.body.startDate;
+    const endDate = req.body.endDate;
+
+    
+
+    // Get today date
+    const today = new Date ();
+    today.setHours(0,0,0,0);
+    // Convert user's input into Dates
+    const start = new Date (startDate);
+    start.setHours(0,0,0,0);
+    const end = new Date (endDate);
+    end.setHours(0,0,0,0);
+
+    // Calculate the trip status
+    let status;
+    if (today < start) 
+    {
+        status = "Upcoming";
+    }
+    else if (today > end)
+    {
+        status = "Completed";
+    }
+    else 
+    {
+        status = "Ongoing";
+    }
+
+    db.query(
+        'UPDATE trips SET tripName = ? , destination = ?, startDate = ?, endDate = ?, status = ? WHERE tripId = ? AND userId = ?',
+        [tripName, destination,startDate,endDate,status,tripId,userId], (err,result) =>
+        {
+            if (err)
+            {
+                console.log(err);
+                return res.send("Error updating trip");
+            }
+
+            res.redirect('/trips')
+        }
+    )
+
+});
+
+
+    
+
+
+
+
+
+app.post('/trips/:id',checkAuthenticated,(req,res)=> 
+{
+    const userId = req.session.user.userId;
+    const tripName = req.body.tripName;
+    const destination= req.body.destination;
+    const startDate = req.body.startDate;
+    const endDate = req.body.endDate;
+
+     // Get today date
+    const today = new Date ();
+    today.setHours(0,0,0,0);
+    // Convert user's input into Dates
+    const start = new Date (startDate);
+    start.setHours(0,0,0,0);
+    const end = new Date (endDate);
+    end.setHours(0,0,0,0);
+
+    let status;
+    if (today < start) 
+    {
+        status = "Upcoming";
+    }
+    else if (today > end)
+    {
+        status = "Completed";
+    }
+    else 
+    {
+        status = "Ongoing";
+    }
+
+    db.query(
+       'UPDATE trips SET tripName = ?, destination = ? , startDate = ?, endDate = ?, status = ? WHERE tripID = ? AND userId = ?',
+       [tripName,destination,startDate,endDate,status,tripId,userId],
+       (err) => 
+        {
+            if (err) return res.send('Error updating trips');
+            res.redirect('/trips/',tripId);
+       }
+    );
+});
+
+app.get('/trips/:id/share',checkAuthenticated,(req,res)=>{
+
+    const tripId = req.params.id;
+    const email = req.body.email;
+
+    res.render('ShareTrip',{
+        tripId: tripId
+    });
+});
+app.post('/trips/:id/share',checkAuthenticated,(req,res) =>{
+    const tripId = req.params.id;
+
+    // Enter email
+    const email = req.body.email;
+
+    
+
+    db.query(
+        'SELECT userId FROM users WHERE email=?',[email],(err,results) => {
+            if (err){
+                return res.send("Database Error");
+            }
+            if (results.length === 0){
+                return res.send("User not found");
+            }
+
+            const sharedUserId = results[0].userId;
+
+            db.query('INSERT INTO trip_share (trip_id, user_id, status) VALUES (?,?,?)',[tripId,sharedUserId,'Pending'],
+                (err) => 
+                {
+                    if (err){
+                        console.log(err);
+                        return res.send("Error sharing trip.");
+                    }
+
+                    res.send("Trip shared successfully!");
+                }
+            );
+        }
+    );
+
+});
+
+app.get('/ShareTrip', checkAuthenticated,(req,res)=>{
+    const userId = req.session.user.userId;
+
+    db.query('SELECT trip_share.trip_id, trip_share.status, trips.tripId,trips.tripName,trips.destination FROM trip_share JOIN trips ON trip_share.trip_id = trips.tripId WHERE trip_share.user_id =?',[userId],(err,results)=>{
+        if (err) 
+        {
+            console.log(err);
+            return res.send("Database Error");
+        }
+        
+        res.render("ShareTrip",{
+            trips: results
+        });
+    }
+);
+});
+        
+
+
+
+       
+
+            
+
+
+
+
+
+
+
+
 
 // ---------- Login ----------
 app.get('/login', (req, res) => {

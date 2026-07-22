@@ -10,6 +10,8 @@
         <a href="/">Home</a>
         <a href="/#destinations">Destinations</a>
         <a href="/#how-it-works">How It Works</a>
+        <a href="/trips">My Trips</a>
+        
         <% if (user) { %>
             <a class="btn btn-outline" href="<%= user.role === 'admin' ? '/admin' : '/dashboard' %>">My Dashboard</a>
             <form action="/logout" method="POST" class="nav-logout-form">
