@@ -1,12 +1,12 @@
 // ==================================================
-// My assigned part (Authentication & Authorisation):
-// Registration -> validation -> bcrypt hash -> MySQL insert
+// Authentication & Authorisation:
+// Registration -> validation -> bcrypt hash using SHA1 hash -> MySQL insert
 // -> Login -> session -> checkAuthenticated -> checkAdmin
 // -> page shown or access denied -> logout destroys session
-// (Based on the C237 Lesson 19 flow, with bcrypt instead of SHA1)
 // ==================================================
 
 require('dotenv').config();
+
 
 const express = require('express');
 const mysql = require('mysql2');
@@ -16,11 +16,12 @@ const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const multer = require('multer');
 
+ 
 const app = express();
 const port = process.env.PORT || 3000;
 
 // ==================================================
-// Database connection (Lesson 20: credentials come
+// Database connection (credentials come
 // from environment variables, never hardcoded)
 // Azure MySQL requires SSL, so set DB_SSL=true in .env
 // when using the Azure database (leave it out for localhost).
@@ -89,7 +90,7 @@ const strongPasswordRegex =
 const passwordRequirementsMessage =
     'Password must contain at least 8 characters, including one uppercase letter, one lowercase letter, one number and one symbol.';
 
-// Server-side validation for the registration form (Lesson 19 Step 1)
+// Server-side validation for the registration form
 // Public registration never accepts a role from the browser — every
 // account created here is a traveler. Admin accounts are promoted
 // manually (SQL), never through this form.
@@ -126,7 +127,7 @@ const checkAuthenticated = (req, res, next) => {
     res.redirect('/login');
 };
 
-// Authorisation: does the logged-in user have the admin role? (Lesson 19)
+// Authorisation: does the logged-in user have the admin role?
 // Safe even when req.session.user is undefined.
 const checkAdmin = (req, res, next) => {
     if (req.session.user && req.session.user.role === 'admin') {
