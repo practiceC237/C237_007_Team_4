@@ -1,10 +1,8 @@
 // ==================================================
-// My assigned part (Authentication & Authorisation):
-// Registration -> validation -> bcrypt hash -> MySQL insert
-// -> Login -> session -> checkAuthenticated -> checkAdmin
-// -> page shown or access denied -> logout destroys session
-// (Based on the C237 Lesson 19 flow, with bcrypt instead of SHA1)
+// Authentication & Authorisation + Packing List Feature
 // ==================================================
+// Silence internal dependency deprecation warnings (e.g. util.isArray in mysql2 sub-packages)
+process.noDeprecation = true;
 
 require('dotenv').config();
 
@@ -19,17 +17,14 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 // ==================================================
-// Database connection (Lesson 20: credentials come
-// from environment variables, never hardcoded)
-// Azure MySQL requires SSL, so set DB_SSL=true in .env
-// when using the Azure database (leave it out for localhost).
+// Database connection
 // ==================================================
 const db = mysql.createConnection({
-    host: process.env.DB_HOST ,
-    port: process.env.DB_PORT ,
-    user: process.env.DB_USER ,
-    password: process.env.DB_PASSWORD ,
-    database: process.env.DB_NAME ,
+    host: process.env.DB_HOST,
+    port: process.env.DB_PORT,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
     ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: true } : undefined
 });
 
@@ -37,12 +32,57 @@ db.connect((err) => {
     if (err) {
         console.error('Could not connect to MySQL:', err.message);
         console.error('Check your .env values (and DB_SSL=true for Azure).');
-    } else {
-        console.log('Connected to MySQL database.');
+        return;
     }
+
+    console.log('Connected to MySQL database.');
+
+    // Auto-create the table in whichever database Node is connected to
+    const initTableSql = `
+        CREATE TABLE IF NOT EXISTS packing_items (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            trip_id INT NOT NULL DEFAULT 1,
+            item_name VARCHAR(255) NOT NULL,
+            category VARCHAR(100) NOT NULL DEFAULT 'Misc',
+            quantity INT NOT NULL DEFAULT 1,
+            is_packed TINYINT(1) NOT NULL DEFAULT 0,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_packing_trip (trip_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `;
+
+    db.query(initTableSql, (tableErr) => {
+        if (tableErr) {
+            console.error('Error initializing packing_items table:', tableErr.message);
+            return;
+        }
+
+        db.query('SELECT COUNT(*) AS count FROM packing_items', (countErr, results) => {
+            if (countErr) {
+                console.error('Error checking packing_items count:', countErr.message);
+                return;
+            }
+
+            if (results[0].count === 0) {
+                const seedSql = `
+                    INSERT INTO packing_items (trip_id, item_name, category, quantity, is_packed) VALUES
+                    (1, 'Passport & Visa', 'Documents', 1, 1),
+                    (1, 'Phone Charger', 'Electronics', 1, 0),
+                    (1, 'T-Shirts', 'Clothing', 5, 0),
+                    (1, 'Toothbrush', 'Toiletries', 1, 1);
+                `;
+                db.query(seedSql, (seedErr) => {
+                    if (seedErr) {
+                        console.error('Error seeding packing_items:', seedErr.message);
+                        return;
+                    }
+                    console.log('Sample packing items seeded!');
+                });
+            }
+        });
+    });
 });
 
-// Keep the app alive and log the reason if the connection drops later
 db.on('error', (err) => {
     console.error('MySQL connection error:', err.message);
 });
@@ -54,22 +94,20 @@ app.set('view engine', 'ejs');
 app.use(express.urlencoded({ extended: false }));
 app.use(express.static('public'));
 
-// Session middleware (Lesson 19, hardened for deployment)
 app.use(session({
     secret: process.env.SESSION_SECRET || 'dev-only-secret-change-me',
     resave: false,
     saveUninitialized: false,
     cookie: {
-        httpOnly: true,                                  // JS in the browser cannot read the cookie
-        sameSite: 'lax',                                 // basic CSRF protection
-        secure: process.env.NODE_ENV === 'production',   // HTTPS-only cookie in production
-        maxAge: 1000 * 60 * 60 * 24                      // session expires after 1 day
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: 1000 * 60 * 60 * 24
     }
 }));
 
 app.use(flash());
 
-// Make the logged-in user available to every EJS page
 app.use((req, res, next) => {
     res.locals.user = req.session.user || null;
     next();
@@ -79,19 +117,11 @@ app.use((req, res, next) => {
 // Middleware: validation, authentication, authorisation
 // ==================================================
 
-// Password strength: at least 8 characters, one uppercase, one lowercase,
-// one number and one symbol. Enforced here (server-side) for both
-// registration and password reset — never relying on the HTML
-// `minlength`/`required` attributes alone, since those can be bypassed.
 const strongPasswordRegex =
     /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
 const passwordRequirementsMessage =
     'Password must contain at least 8 characters, including one uppercase letter, one lowercase letter, one number and one symbol.';
 
-// Server-side validation for the registration form (Lesson 19 Step 1)
-// Public registration never accepts a role from the browser — every
-// account created here is a traveler. Admin accounts are promoted
-// manually (SQL), never through this form.
 const validateRegistration = (req, res, next) => {
     const { fullName, password, confirmPassword } = req.body;
     const email = (req.body.email || '').trim().toLowerCase();
@@ -107,16 +137,14 @@ const validateRegistration = (req, res, next) => {
 
     if (errors.length > 0) {
         req.flash('error', errors);
-        // Preserve only full name and email — never the passwords
         req.flash('formData', { fullName, email });
         return res.redirect('/register');
     }
 
-    req.body.email = email; // pass the cleaned email on to the route
+    req.body.email = email;
     next();
 };
 
-// Authentication: is the user logged in? (Lesson 19)
 const checkAuthenticated = (req, res, next) => {
     if (req.session.user) {
         return next();
@@ -125,8 +153,6 @@ const checkAuthenticated = (req, res, next) => {
     res.redirect('/login');
 };
 
-// Authorisation: does the logged-in user have the admin role? (Lesson 19)
-// Safe even when req.session.user is undefined.
 const checkAdmin = (req, res, next) => {
     if (req.session.user && req.session.user.role === 'admin') {
         return next();
@@ -134,6 +160,9 @@ const checkAdmin = (req, res, next) => {
     req.flash('error', "You don't have permission to access that page.");
     res.redirect('/dashboard');
 };
+
+// Default available categories for packing
+const PACKING_CATEGORIES = ['Clothing', 'Toiletries', 'Electronics', 'Documents', 'Medical / First Aid', 'Misc'];
 
 // ==================================================
 // Public routes
@@ -158,7 +187,6 @@ app.get('/register', (req, res) => {
 app.post('/register', validateRegistration, (req, res) => {
     const { fullName, email, password } = req.body;
 
-// 1. Check the email is not already registered (parameterised query)
     const checkSql = 'SELECT userId FROM users WHERE email = ?';
     db.query(checkSql, [email], (err, results) => {
         if (err) {
@@ -172,7 +200,6 @@ app.post('/register', validateRegistration, (req, res) => {
             return res.redirect('/register');
         }
 
-        // 2. Hash the password with bcrypt (never store plain text)
         bcrypt.hash(password, 10, (hashErr, passwordHash) => {
             if (hashErr) {
                 console.error(hashErr);
@@ -180,9 +207,7 @@ app.post('/register', validateRegistration, (req, res) => {
                 return res.redirect('/register');
             }
 
-            // 3. Insert the new user — always as a traveler. Admin accounts
-            // are never created through public registration.
-            const insertSql = 'INSERT INTO users (fullName, email, passwordHash, role) VALUES (?, ?, ?, \'traveler\')';
+            const insertSql = "INSERT INTO users (fullName, email, passwordHash, role) VALUES (?, ?, ?, 'traveler')";
             db.query(insertSql, [fullName.trim(), email, passwordHash], (insertErr) => {
                 if (insertErr) {
                     console.error(insertErr);
@@ -213,8 +238,6 @@ app.post('/login', (req, res) => {
         return res.redirect('/login');
     }
 
-    // Look up the user by email only — the bcrypt compare happens in Node,
-    // never in the SQL query.
     const sql = 'SELECT * FROM users WHERE email = ?';
     db.query(sql, [email], (err, results) => {
         if (err) {
@@ -223,7 +246,6 @@ app.post('/login', (req, res) => {
             return res.redirect('/login');
         }
 
-        // Same message whether the email or the password is wrong
         if (results.length === 0) {
             req.flash('error', 'Invalid email or password');
             return res.redirect('/login');
@@ -236,7 +258,6 @@ app.post('/login', (req, res) => {
                 return res.redirect('/login');
             }
 
-            // Regenerate the session ID after login (prevents session fixation)
             req.session.regenerate((regenErr) => {
                 if (regenErr) {
                     console.error(regenErr);
@@ -244,7 +265,6 @@ app.post('/login', (req, res) => {
                     return res.redirect('/login');
                 }
 
-                // Store only safe fields in the session — never the hash
                 req.session.user = {
                     userId: account.userId,
                     fullName: account.fullName,
@@ -263,9 +283,6 @@ app.post('/login', (req, res) => {
 });
 
 // ---------- Forgot password ----------
-// The user asks for a reset link. Because this project has no email
-// service, the link is printed in the SERVER CONSOLE (never shown in
-// the browser, so nobody can reset another person's account).
 app.get('/forgot-password', (req, res) => {
     res.render('forgot_password', {
         messages: req.flash('success'),
@@ -281,8 +298,6 @@ app.post('/forgot-password', (req, res) => {
         return res.redirect('/forgot-password');
     }
 
-    // Always show the same message whether or not the email exists,
-    // so the form cannot be used to discover registered accounts.
     const finish = () => {
         req.flash('success',
             'If that email is registered, a reset link has been generated. ' +
@@ -295,11 +310,9 @@ app.post('/forgot-password', (req, res) => {
             return finish();
         }
 
-        // Random token: the plain value goes into the link, only its
-        // SHA-256 hash is stored in the database (like a password).
         const token = crypto.randomBytes(32).toString('hex');
         const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
-        const expiry = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+        const expiry = new Date(Date.now() + 15 * 60 * 1000);
 
         const sql = 'UPDATE users SET resetTokenHash = ?, resetTokenExpiry = ? WHERE userId = ?';
         db.query(sql, [tokenHash, expiry, results[0].userId], (updateErr) => {
@@ -314,7 +327,7 @@ app.post('/forgot-password', (req, res) => {
     });
 });
 
-// ---------- Reset password (via the token link) ----------
+// ---------- Reset password ----------
 app.get('/reset-password/:token', (req, res) => {
     const tokenHash = crypto.createHash('sha256').update(req.params.token).digest('hex');
     const sql = 'SELECT userId FROM users WHERE resetTokenHash = ? AND resetTokenExpiry > NOW()';
@@ -342,7 +355,6 @@ app.post('/reset-password/:token', (req, res) => {
 
     if (errors.length > 0) {
         req.flash('error', errors);
-        // Redirecting back to the same token URL preserves it for the retry
         return res.redirect('/reset-password/' + req.params.token);
     }
 
@@ -359,7 +371,6 @@ app.post('/reset-password/:token', (req, res) => {
                 req.flash('error', 'Something went wrong. Please try again.');
                 return res.redirect('/reset-password/' + req.params.token);
             }
-            // Save the new hash and clear the token so the link is single-use
             const updateSql = 'UPDATE users SET passwordHash = ?, resetTokenHash = NULL, resetTokenExpiry = NULL WHERE userId = ?';
             db.query(updateSql, [passwordHash, results[0].userId], (updateErr) => {
                 if (updateErr) {
@@ -373,16 +384,16 @@ app.post('/reset-password/:token', (req, res) => {
     });
 });
 
-// ---------- Logout (POST so a link cannot fake it) ----------
+// ---------- Logout ----------
 app.post('/logout', (req, res) => {
     req.session.destroy(() => {
-        res.clearCookie('connect.sid'); // remove the session cookie
+        res.clearCookie('connect.sid');
         res.redirect('/login');
     });
 });
 
 // ==================================================
-// Traveler routes (protected by checkAuthenticated)
+// Traveler routes
 // ==================================================
 app.get('/dashboard', checkAuthenticated, (req, res) => {
     res.render('user', {
@@ -392,7 +403,171 @@ app.get('/dashboard', checkAuthenticated, (req, res) => {
 });
 
 // ==================================================
-// Admin routes (checkAuthenticated + checkAdmin)
+// PACKING LIST ROUTES 
+// ==================================================
+
+// 1. VIEW PACKING LIST (or default for trip)
+app.get('/trips/:tripId/packing-list', checkAuthenticated, (req, res) => {
+    const tripId = req.params.tripId;
+    const filterStatus = req.query.filterStatus || 'all';
+    const filterCategory = req.query.filterCategory || 'All';
+
+    // Fetch all items for overall stats calculation
+    let sqlAll = 'SELECT * FROM packing_items WHERE trip_id = ?';
+    db.query(sqlAll, [tripId], (err, allItems) => {
+        if (err) {
+            console.error(err);
+            req.flash('error', 'Could not load packing list.');
+            return res.redirect('/dashboard');
+        }
+
+        const totalItems = allItems.length;
+        // Handles both numbers (1) and booleans (true) reliably
+        const packedCount = allItems.filter(i => Number(i.is_packed) === 1 || i.is_packed === true).length;
+        const unpackedCount = totalItems - packedCount;
+        const overallProgress = totalItems > 0 ? Math.round((packedCount / totalItems) * 100) : 0;
+        
+        // Category breakdown calculation
+        const categoryStats = PACKING_CATEGORIES.map(cat => {
+        const catItems = allItems.filter(i => i.category === cat);
+        const total = catItems.length;
+        const packed = catItems.filter(i => Number(i.is_packed) === 1 || i.is_packed === true).length;
+        const percentage = total > 0 ? Math.round((packed / total) * 100) : 0;
+        return { name: cat, total, packed, percentage };
+    }).filter(c => c.total > 0);
+
+        // Filter items for display
+        let filteredItems = [...allItems];
+        if (filterStatus === 'packed') filteredItems = filteredItems.filter(i => Number(i.is_packed) === 1 || i.is_packed === true);
+        if (filterStatus === 'unpacked') filteredItems = filteredItems.filter(i => !(Number(i.is_packed) === 1 || i.is_packed === true));
+        if (filterCategory !== 'All') filteredItems = filteredItems.filter(i => i.category === filterCategory);
+
+        res.render('packing-list', {
+            tripId,
+            items: filteredItems,
+            totalItems,
+            packedCount,
+            unpackedCount,
+            overallProgress,
+            categoryStats,
+            categories: PACKING_CATEGORIES,
+            filterStatus,
+            filterCategory,
+            messages: req.flash('success'),
+            errors: req.flash('error')
+        });
+    });
+});
+
+// Fallback shortcut route: /packing-list (Redirects or uses default trip 1)
+app.get('/packing-list', checkAuthenticated, (req, res) => {
+    res.redirect('/trips/1/packing-list');
+});
+
+// 2. GET ADD ITEM FORM
+app.get('/trips/:tripId/packing-list/add', checkAuthenticated, (req, res) => {
+    res.render('add-packing-item', { // <--- ✅ NOW MATCHES add-packing-item.ejs
+        tripId: req.params.tripId,
+        categories: PACKING_CATEGORIES,
+        messages: req.flash('success'),
+        errors: req.flash('error')
+    });
+});
+
+// 3. POST ADD ITEM
+app.post('/trips/:tripId/packing-list/add', checkAuthenticated, (req, res) => {
+    const tripId = req.params.tripId;
+    const { item_name, category, quantity } = req.body;
+
+    if (!item_name || !item_name.trim()) {
+        req.flash('error', 'Item name is required.');
+        return res.redirect(`/trips/${tripId}/packing-list/add`);
+    }
+
+    const sql = 'INSERT INTO packing_items (trip_id, item_name, category, quantity, is_packed) VALUES (?, ?, ?, ?, 0)';
+    db.query(sql, [tripId, item_name.trim(), category || 'Misc', parseInt(quantity) || 1], (err) => {
+        if (err) {
+            console.error(err);
+            req.flash('error', 'Failed to add item.');
+            return res.redirect(`/trips/${tripId}/packing-list/add`);
+        }
+        req.flash('success', 'Item added to packing list!');
+        res.redirect(`/trips/${tripId}/packing-list`);
+    });
+});
+
+// 4. TOGGLE PACKED STATUS (Quick Checkbox)
+app.post('/packing-list/:id/toggle', checkAuthenticated, (req, res) => {
+    const itemId = req.params.id;
+    const { trip_id, is_packed } = req.body;
+
+    const sql = 'UPDATE packing_items SET is_packed = ? WHERE id = ?';
+    db.query(sql, [is_packed, itemId], (err) => {
+        if (err) console.error(err);
+        res.redirect(`/trips/${trip_id || 1}/packing-list`);
+    });
+});
+
+// 5. GET EDIT ITEM FORM
+app.get('/packing-list/:id/edit', checkAuthenticated, (req, res) => {
+    const itemId = req.params.id;
+
+    db.query('SELECT * FROM packing_items WHERE id = ?', [itemId], (err, results) => {
+        if (err || results.length === 0) {
+            req.flash('error', 'Item not found.');
+            return res.redirect('/packing-list');
+        }
+
+        res.render('edit-packing-item', {
+            item: results[0],
+            categories: PACKING_CATEGORIES,
+            messages: req.flash('success'),
+            errors: req.flash('error')
+        });
+    });
+});
+
+// 6. POST EDIT ITEM (UPDATE)
+app.post('/packing-list/:id/edit', checkAuthenticated, (req, res) => {
+    const itemId = req.params.id;
+    const { trip_id, item_name, category, quantity, is_packed } = req.body;
+
+    if (!item_name || !item_name.trim()) {
+        req.flash('error', 'Item name cannot be empty.');
+        return res.redirect(`/packing-list/${itemId}/edit`);
+    }
+
+    const sql = 'UPDATE packing_items SET item_name = ?, category = ?, quantity = ?, is_packed = ? WHERE id = ?';
+    db.query(sql, [item_name.trim(), category, parseInt(quantity) || 1, is_packed ? 1 : 0, itemId], (err) => {
+        if (err) {
+            console.error(err);
+            req.flash('error', 'Failed to update item.');
+            return res.redirect(`/packing-list/${itemId}/edit`);
+        }
+        req.flash('success', 'Item updated successfully!');
+        res.redirect(`/trips/${trip_id || 1}/packing-list`);
+    });
+});
+
+// 7. POST DELETE ITEM
+app.post('/packing-list/:id/delete', checkAuthenticated, (req, res) => {
+    const itemId = req.params.id;
+    const tripId = req.body.trip_id || 1;
+
+    const sql = 'DELETE FROM packing_items WHERE id = ?';
+    db.query(sql, [itemId], (err) => {
+        if (err) {
+            console.error(err);
+            req.flash('error', 'Failed to delete item.');
+        } else {
+            req.flash('success', 'Item deleted.');
+        }
+        res.redirect(`/trips/${tripId}/packing-list`);
+    });
+});
+
+// ==================================================
+// Admin routes
 // ==================================================
 app.get('/admin', checkAuthenticated, checkAdmin, (req, res) => {
     res.render('admin', {
