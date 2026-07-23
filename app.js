@@ -33,12 +33,10 @@ const port = process.env.PORT || 3000;
 // when using the Azure database (leave it out for localhost).
 // ==================================================
 const db = mysql.createConnection({
-    host: process.env.DB_HOST,
-    port: process.env.DB_PORT,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
-    ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: true } : undefined
+    host: "c237-asyraf-mysql.mysql.database.azure.com",
+    user: "c237_007",
+    password: "c237007@2026!",
+    database: "c237_007_team4_travelplanner",
 });
 
 db.connect((err) => {
