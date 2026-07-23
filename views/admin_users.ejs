@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Manage Users : JourneySpark Travel Planner</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="app-body">
+    <%- include('partials/apptopbar') %>
+
+    <div class="app-shell">
+        <%- include('partials/sidebar', { area: 'admin', active: '/admin/users' }) %>
+
+        <div class="app-main">
+            <main class="app-content">
+                <%- include('partials/alerts') %>
+
+                <section class="welcome-row">
+                    <h1>Manage Users</h1>
+                    <p>View every account, promote or demote roles, and remove accounts.</p>
+                </section>
+
+                <% if (users.length === 0) { %>
+                    <section class="empty-panel">
+                        <svg class="icon empty-panel-icon"><use href="/images/icons.svg#icon-group"></use></svg>
+                        <h2>No users yet</h2>
+                        <p class="empty-state">Registered accounts will show up here.</p>
+                    </section>
+                <% } else { %>
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Full Name</th>
+                                    <th>Email</th>
+                                    <th>Role</th>
+                                    <th>Joined</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% users.forEach(function(u) { %>
+                                    <tr>
+                                        <td><%= u.fullName %></td>
+                                        <td><%= u.email %></td>
+                                        <td>
+                                            <% if (u.role === 'admin') { %>
+                                                <span class="role-badge role-admin">Admin</span>
+                                            <% } else { %>
+                                                <span class="role-badge role-traveler">Traveler</span>
+                                            <% } %>
+                                        </td>
+                                        <td><%= new Date(u.createdAt).toLocaleDateString() %></td>
+                                        <td>
+                                            <% if (u.userId === user.userId) { %>
+                                                <span class="empty-state">This is you</span>
+                                            <% } else { %>
+                                                <div class="table-actions">
+                                                    <form action="/admin/users/<%= u.userId %>/role" method="POST">
+                                                        <input type="hidden" name="role" value="<%= u.role === 'admin' ? 'traveler' : 'admin' %>">
+                                                        <button type="submit" class="btn btn-outline btn-sm">
+                                                            <%= u.role === 'admin' ? 'Demote to Traveler' : 'Promote to Admin' %>
+                                                        </button>
+                                                    </form>
+                                                    <form action="/admin/users/<%= u.userId %>/delete" method="POST"
+                                                          onsubmit="return confirm('Delete this user? This cannot be undone.');">
+                                                        <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                                                    </form>
+                                                </div>
+                                            <% } %>
+                                        </td>
+                                    </tr>
+                                <% }); %>
+                            </tbody>
+                        </table>
+                    </div>
+                <% } %>
+            </main>
+        </div>
+    </div>
+    <script src="/js/auth.js"></script>
+</body>
+</html>

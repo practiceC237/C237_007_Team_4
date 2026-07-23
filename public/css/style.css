@@ -1048,6 +1048,28 @@ input::placeholder {
     font-size: 1rem;
 }
 
+.btn-sm {
+    padding: 6px 14px;
+    font-size: 0.8rem;
+}
+
+.btn-danger {
+    background: var(--danger);
+    color: #ffffff;
+}
+
+.btn-danger:hover {
+    background: #c0392b;
+    color: #ffffff;
+}
+
+.table-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
 .btn-block {
     width: 100%;
 }

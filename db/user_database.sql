@@ -34,7 +34,52 @@ CREATE TABLE IF NOT EXISTS users (
   COLLATE utf8mb4_unicode_ci;
 
 -- -------------------------------------------------------------
+-- Trips
+-- One row per trip a traveler plans. `destination` is free text
+-- (not a lookup table) — admins can browse/rename these values
+-- from the Manage Destinations page.
+-- -------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS trips (
+    tripId      INT AUTO_INCREMENT PRIMARY KEY,
+    userId      INT NOT NULL,
+    tripName    VARCHAR(150) NOT NULL,
+    destination VARCHAR(150) NOT NULL,
+    startDate   DATE NOT NULL,
+    endDate     DATE NOT NULL,
+    status      VARCHAR(20) NOT NULL DEFAULT 'Upcoming',
+    image       VARCHAR(255) NULL,
+    createdAt   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_trips_user FOREIGN KEY (userId) REFERENCES users(userId) ON DELETE CASCADE,
+    INDEX idx_trips_user (userId),
+    INDEX idx_trips_destination (destination)
+) ENGINE=InnoDB
+  DEFAULT CHARACTER SET utf8mb4
+  COLLATE utf8mb4_unicode_ci;
+
+-- -------------------------------------------------------------
+-- Trip shares
+-- Tracks a trip being shared with another user, and whether
+-- they've accepted.
+-- -------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS trip_share (
+    id        INT AUTO_INCREMENT PRIMARY KEY,
+    trip_id   INT NOT NULL,
+    user_id   INT NOT NULL,
+    status    VARCHAR(20) NOT NULL DEFAULT 'Pending',
+    createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_trip_share_trip FOREIGN KEY (trip_id) REFERENCES trips(tripId) ON DELETE CASCADE,
+    CONSTRAINT fk_trip_share_user FOREIGN KEY (user_id) REFERENCES users(userId) ON DELETE CASCADE,
+    INDEX idx_trip_share_user (user_id)
+) ENGINE=InnoDB
+  DEFAULT CHARACTER SET utf8mb4
+  COLLATE utf8mb4_unicode_ci;
+
+-- -------------------------------------------------------------
 -- Verification commands
 -- -------------------------------------------------------------
 SHOW TABLES;
 DESCRIBE users;
+DESCRIBE trips;
+DESCRIBE trip_share;

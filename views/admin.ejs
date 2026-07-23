@@ -23,45 +23,44 @@
                     <p>Manage travelers, trips and reports for JourneySpark Travel Planner.</p>
                 </section>
 
-                <!-- Totals connect to MySQL when teammates' features land -->
                 <section class="stat-grid">
                     <div class="stat-card">
                         <span class="stat-icon"><svg class="icon"><use href="/images/icons.svg#icon-group"></use></svg></span>
                         <div>
-                            <div class="stat-value">&mdash;</div>
+                            <div class="stat-value"><%= counts.totalUsers %></div>
                             <div class="stat-label">Total Users</div>
                         </div>
                     </div>
                     <div class="stat-card">
-                        <span class="stat-icon"><svg class="icon"><use href="/images/icons.svg#icon-plane"></use></svg></span>
+                        <span class="stat-icon"><svg class="icon"><use href="/images/icons.svg#icon-passport"></use></svg></span>
                         <div>
-                            <div class="stat-value">&mdash;</div>
-                            <div class="stat-label">Total Trips</div>
+                            <div class="stat-value"><%= counts.totalAdmins %></div>
+                            <div class="stat-label">Total Admins</div>
                         </div>
                     </div>
                     <div class="stat-card">
                         <span class="stat-icon"><svg class="icon"><use href="/images/icons.svg#icon-route"></use></svg></span>
                         <div>
-                            <div class="stat-value">&mdash;</div>
-                            <div class="stat-label">Shared Trips</div>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <span class="stat-icon"><svg class="icon"><use href="/images/icons.svg#icon-chart"></use></svg></span>
-                        <div>
-                            <div class="stat-value">&mdash;</div>
-                            <div class="stat-label">Reports</div>
+                            <div class="stat-value"><%= counts.totalDestinations %></div>
+                            <div class="stat-label">Total Destinations</div>
                         </div>
                     </div>
                 </section>
 
                 <section class="page-header">
-                    <h1>Recent Users</h1>
+                    <h1>Quick Actions</h1>
                 </section>
-                <section class="empty-panel">
-                    <svg class="icon empty-panel-icon"><use href="/images/icons.svg#icon-group"></use></svg>
-                    <h2>No data to show yet</h2>
-                    <p class="empty-state">Registered travelers will be listed here once the Users feature is connected to MySQL.</p>
+                <section class="card-grid">
+                    <a href="/admin/users" class="panel-card">
+                        <svg class="icon panel-icon"><use href="/images/icons.svg#icon-group"></use></svg>
+                        <h3>Manage Users</h3>
+                        <p class="empty-state">View traveler and admin accounts, change roles, or remove accounts.</p>
+                    </a>
+                    <a href="/admin/destinations" class="panel-card">
+                        <svg class="icon panel-icon"><use href="/images/icons.svg#icon-route"></use></svg>
+                        <h3>Manage Destinations</h3>
+                        <p class="empty-state">Browse destinations travelers have used and rename them if needed.</p>
+                    </a>
                 </section>
             </main>
         </div>
