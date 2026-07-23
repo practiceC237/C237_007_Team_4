@@ -4,6 +4,8 @@
 // -> Login -> session -> checkAuthenticated -> checkAdmin
 // -> page shown or access denied -> logout destroys session
 // ==================================================
+// Silence internal dependency deprecation warnings (e.g. util.isArray in mysql2 sub-packages)
+process.noDeprecation = true;
 
 require('dotenv').config();
 
@@ -43,9 +45,55 @@ db.connect((err) => {
     if (err) {
         console.error('Could not connect to MySQL:', err.message);
         console.error('Check your .env values (and DB_SSL=true for Azure).');
-    } else {
-        console.log('Connected to MySQL database.');
+        return;
     }
+
+    console.log('Connected to MySQL database.');
+
+    // Auto-create the table in whichever database Node is connected to
+    const initTableSql = `
+        CREATE TABLE IF NOT EXISTS packing_items (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            trip_id INT NOT NULL DEFAULT 1,
+            item_name VARCHAR(255) NOT NULL,
+            category VARCHAR(100) NOT NULL DEFAULT 'Misc',
+            quantity INT NOT NULL DEFAULT 1,
+            is_packed TINYINT(1) NOT NULL DEFAULT 0,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_packing_trip (trip_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `;
+
+    db.query(initTableSql, (tableErr) => {
+        if (tableErr) {
+            console.error('Error initializing packing_items table:', tableErr.message);
+            return;
+        }
+
+        db.query('SELECT COUNT(*) AS count FROM packing_items', (countErr, results) => {
+            if (countErr) {
+                console.error('Error checking packing_items count:', countErr.message);
+                return;
+            }
+
+            if (results[0].count === 0) {
+                const seedSql = `
+                    INSERT INTO packing_items (trip_id, item_name, category, quantity, is_packed) VALUES
+                    (1, 'Passport & Visa', 'Documents', 1, 1),
+                    (1, 'Phone Charger', 'Electronics', 1, 0),
+                    (1, 'T-Shirts', 'Clothing', 5, 0),
+                    (1, 'Toothbrush', 'Toiletries', 1, 1);
+                `;
+                db.query(seedSql, (seedErr) => {
+                    if (seedErr) {
+                        console.error('Error seeding packing_items:', seedErr.message);
+                        return;
+                    }
+                    console.log('Sample packing items seeded!');
+                });
+            }
+        });
+    });
 });
 
 db.on('error', (err) => {
@@ -64,10 +112,10 @@ app.use(session({
     resave: false,
     saveUninitialized: false,
     cookie: {
-        httpOnly: true,                                  // JS in the browser cannot read the cookie
-        sameSite: 'lax',                                 // basic CSRF protection
-        secure: process.env.NODE_ENV === 'production',   // HTTPS-only cookie in production
-        maxAge: 1000 * 60 * 60 * 24                      // session expires after 1 day
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: 1000 * 60 * 60 * 24
     }
 }));
 
@@ -125,6 +173,9 @@ const checkAdmin = (req, res, next) => {
     res.redirect('/');
 };
 
+// Default available categories for packing
+const PACKING_CATEGORIES = ['Clothing', 'Toiletries', 'Electronics', 'Documents', 'Medical / First Aid', 'Misc'];
+
 // ==================================================
 // Public Routes
 // ==================================================
@@ -168,7 +219,7 @@ app.post('/register', validateRegistration, (req, res) => {
                 return res.redirect('/register');
             }
 
-            const insertSql = 'INSERT INTO users (fullName, email, passwordHash, role, totalBudget) VALUES (?, ?, ?, \'traveler\', 1000.00)';
+            const insertSql = "INSERT INTO users (fullName, email, passwordHash, role) VALUES (?, ?, ?, 'traveler')";
             db.query(insertSql, [fullName.trim(), email, passwordHash], (insertErr) => {
                 if (insertErr) {
                     console.error(insertErr);
@@ -585,7 +636,7 @@ app.post('/login', (req, res) => {
     });
 });
 
-// ---------- Forgot Password & Reset ----------
+// ---------- Forgot Password ----------
 app.get('/forgot-password', (req, res) => {
     res.render('forgot_password', {
         messages: req.flash('success'),
@@ -630,6 +681,7 @@ app.post('/forgot-password', (req, res) => {
     });
 });
 
+// ---------- Reset password ----------
 app.get('/reset-password/:token', (req, res) => {
     const tokenHash = crypto.createHash('sha256').update(req.params.token).digest('hex');
     const sql = 'SELECT userId FROM users WHERE resetTokenHash = ? AND resetTokenExpiry > NOW()';
@@ -865,7 +917,171 @@ app.post('/budget/delete/:id', checkAuthenticated, (req, res) => {
 // app.use('/trips/:tripId/itinerary', itineraryRoutes(db, checkAuthenticated));
 
 // ==================================================
-// Admin Routes
+// PACKING LIST ROUTES 
+// ==================================================
+
+// 1. VIEW PACKING LIST (or default for trip)
+app.get('/trips/:tripId/packing-list', checkAuthenticated, (req, res) => {
+    const tripId = req.params.tripId;
+    const filterStatus = req.query.filterStatus || 'all';
+    const filterCategory = req.query.filterCategory || 'All';
+
+    // Fetch all items for overall stats calculation
+    let sqlAll = 'SELECT * FROM packing_items WHERE trip_id = ?';
+    db.query(sqlAll, [tripId], (err, allItems) => {
+        if (err) {
+            console.error(err);
+            req.flash('error', 'Could not load packing list.');
+            return res.redirect('/dashboard');
+        }
+
+        const totalItems = allItems.length;
+        // Handles both numbers (1) and booleans (true) reliably
+        const packedCount = allItems.filter(i => Number(i.is_packed) === 1 || i.is_packed === true).length;
+        const unpackedCount = totalItems - packedCount;
+        const overallProgress = totalItems > 0 ? Math.round((packedCount / totalItems) * 100) : 0;
+        
+        // Category breakdown calculation
+        const categoryStats = PACKING_CATEGORIES.map(cat => {
+        const catItems = allItems.filter(i => i.category === cat);
+        const total = catItems.length;
+        const packed = catItems.filter(i => Number(i.is_packed) === 1 || i.is_packed === true).length;
+        const percentage = total > 0 ? Math.round((packed / total) * 100) : 0;
+        return { name: cat, total, packed, percentage };
+    }).filter(c => c.total > 0);
+
+        // Filter items for display
+        let filteredItems = [...allItems];
+        if (filterStatus === 'packed') filteredItems = filteredItems.filter(i => Number(i.is_packed) === 1 || i.is_packed === true);
+        if (filterStatus === 'unpacked') filteredItems = filteredItems.filter(i => !(Number(i.is_packed) === 1 || i.is_packed === true));
+        if (filterCategory !== 'All') filteredItems = filteredItems.filter(i => i.category === filterCategory);
+
+        res.render('packing-list', {
+            tripId,
+            items: filteredItems,
+            totalItems,
+            packedCount,
+            unpackedCount,
+            overallProgress,
+            categoryStats,
+            categories: PACKING_CATEGORIES,
+            filterStatus,
+            filterCategory,
+            messages: req.flash('success'),
+            errors: req.flash('error')
+        });
+    });
+});
+
+// Fallback shortcut route: /packing-list (Redirects or uses default trip 1)
+app.get('/packing-list', checkAuthenticated, (req, res) => {
+    res.redirect('/trips/1/packing-list');
+});
+
+// 2. GET ADD ITEM FORM
+app.get('/trips/:tripId/packing-list/add', checkAuthenticated, (req, res) => {
+    res.render('add-packing-item', { // <--- ✅ NOW MATCHES add-packing-item.ejs
+        tripId: req.params.tripId,
+        categories: PACKING_CATEGORIES,
+        messages: req.flash('success'),
+        errors: req.flash('error')
+    });
+});
+
+// 3. POST ADD ITEM
+app.post('/trips/:tripId/packing-list/add', checkAuthenticated, (req, res) => {
+    const tripId = req.params.tripId;
+    const { item_name, category, quantity } = req.body;
+
+    if (!item_name || !item_name.trim()) {
+        req.flash('error', 'Item name is required.');
+        return res.redirect(`/trips/${tripId}/packing-list/add`);
+    }
+
+    const sql = 'INSERT INTO packing_items (trip_id, item_name, category, quantity, is_packed) VALUES (?, ?, ?, ?, 0)';
+    db.query(sql, [tripId, item_name.trim(), category || 'Misc', parseInt(quantity) || 1], (err) => {
+        if (err) {
+            console.error(err);
+            req.flash('error', 'Failed to add item.');
+            return res.redirect(`/trips/${tripId}/packing-list/add`);
+        }
+        req.flash('success', 'Item added to packing list!');
+        res.redirect(`/trips/${tripId}/packing-list`);
+    });
+});
+
+// 4. TOGGLE PACKED STATUS (Quick Checkbox)
+app.post('/packing-list/:id/toggle', checkAuthenticated, (req, res) => {
+    const itemId = req.params.id;
+    const { trip_id, is_packed } = req.body;
+
+    const sql = 'UPDATE packing_items SET is_packed = ? WHERE id = ?';
+    db.query(sql, [is_packed, itemId], (err) => {
+        if (err) console.error(err);
+        res.redirect(`/trips/${trip_id || 1}/packing-list`);
+    });
+});
+
+// 5. GET EDIT ITEM FORM
+app.get('/packing-list/:id/edit', checkAuthenticated, (req, res) => {
+    const itemId = req.params.id;
+
+    db.query('SELECT * FROM packing_items WHERE id = ?', [itemId], (err, results) => {
+        if (err || results.length === 0) {
+            req.flash('error', 'Item not found.');
+            return res.redirect('/packing-list');
+        }
+
+        res.render('edit-packing-item', {
+            item: results[0],
+            categories: PACKING_CATEGORIES,
+            messages: req.flash('success'),
+            errors: req.flash('error')
+        });
+    });
+});
+
+// 6. POST EDIT ITEM (UPDATE)
+app.post('/packing-list/:id/edit', checkAuthenticated, (req, res) => {
+    const itemId = req.params.id;
+    const { trip_id, item_name, category, quantity, is_packed } = req.body;
+
+    if (!item_name || !item_name.trim()) {
+        req.flash('error', 'Item name cannot be empty.');
+        return res.redirect(`/packing-list/${itemId}/edit`);
+    }
+
+    const sql = 'UPDATE packing_items SET item_name = ?, category = ?, quantity = ?, is_packed = ? WHERE id = ?';
+    db.query(sql, [item_name.trim(), category, parseInt(quantity) || 1, is_packed ? 1 : 0, itemId], (err) => {
+        if (err) {
+            console.error(err);
+            req.flash('error', 'Failed to update item.');
+            return res.redirect(`/packing-list/${itemId}/edit`);
+        }
+        req.flash('success', 'Item updated successfully!');
+        res.redirect(`/trips/${trip_id || 1}/packing-list`);
+    });
+});
+
+// 7. POST DELETE ITEM
+app.post('/packing-list/:id/delete', checkAuthenticated, (req, res) => {
+    const itemId = req.params.id;
+    const tripId = req.body.trip_id || 1;
+
+    const sql = 'DELETE FROM packing_items WHERE id = ?';
+    db.query(sql, [itemId], (err) => {
+        if (err) {
+            console.error(err);
+            req.flash('error', 'Failed to delete item.');
+        } else {
+            req.flash('success', 'Item deleted.');
+        }
+        res.redirect(`/trips/${tripId}/packing-list`);
+    });
+});
+
+// ==================================================
+// Admin routes
 // ==================================================
 app.get('/admin', checkAuthenticated, checkAdmin, (req, res) => {
     res.render('admin', {

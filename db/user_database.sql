@@ -1,6 +1,6 @@
 -- =============================================================
--- This script creates the local database and the users table used
--- by app.js for registration, login, admin access and password reset.
+-- Local database script for JourneySpark Travel Planner
+-- Includes: Users table and Packing Items table with sample data.
 -- =============================================================
 
 CREATE DATABASE IF NOT EXISTS c237_007_team4_travelplanner
@@ -34,7 +34,38 @@ CREATE TABLE IF NOT EXISTS users (
   COLLATE utf8mb4_unicode_ci;
 
 -- -------------------------------------------------------------
--- Verification commands
+-- Packing Items Table
+-- Stores individual packing list items linked to a trip.
+-- -------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS packing_items (
+    id          INT AUTO_INCREMENT PRIMARY KEY,
+    trip_id     INT NOT NULL DEFAULT 1,
+    item_name   VARCHAR(255) NOT NULL,
+    category    VARCHAR(100) NOT NULL DEFAULT 'Misc',
+    quantity    INT NOT NULL DEFAULT 1,
+    is_packed   TINYINT(1) NOT NULL DEFAULT 0,
+    created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    INDEX idx_packing_trip (trip_id)
+) ENGINE=InnoDB
+  DEFAULT CHARACTER SET utf8mb4
+  COLLATE utf8mb4_unicode_ci;
+
+-- -------------------------------------------------------------
+-- Initial Seed Data for Packing List (Trip ID: 1)
+-- -------------------------------------------------------------
+INSERT INTO packing_items (trip_id, item_name, category, quantity, is_packed) 
+VALUES 
+    (1, 'Passport & Visa Documents', 'Documents', 1, 1),
+    (1, 'Phone Charger & Power Bank', 'Electronics', 1, 0),
+    (1, 'Cotton T-Shirts', 'Clothing', 5, 0),
+    (1, 'Toothbrush & Toothpaste', 'Toiletries', 1, 1),
+    (1, 'Universal Travel Adapter', 'Electronics', 1, 0);
+
+-- -------------------------------------------------------------
+-- Verification Commands
 -- -------------------------------------------------------------
 SHOW TABLES;
 DESCRIBE users;
+DESCRIBE packing_items;
+SELECT * FROM packing_items;
