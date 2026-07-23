@@ -4,19 +4,22 @@
         <nav class="sidebar-nav">
             <a href="/admin" class="side-link <%= active === '/admin' ? 'active' : '' %>">
                 <svg class="icon"><use href="/images/icons.svg#icon-compass"></use></svg>Dashboard</a>
+            <a href="/admin/users" class="side-link <%= active === '/admin/users' ? 'active' : '' %>">
+                <svg class="icon"><use href="/images/icons.svg#icon-group"></use></svg>Manage Users</a>
+            <a href="/admin/destinations" class="side-link <%= active === '/admin/destinations' ? 'active' : '' %>">
+                <svg class="icon"><use href="/images/icons.svg#icon-route"></use></svg>Manage Destinations</a>
         </nav>
     <% } else { %>
         <nav class="sidebar-nav">
             <a href="/dashboard" class="side-link <%= active === '/dashboard' ? 'active' : '' %>">
                 <svg class="icon"><use href="/images/icons.svg#icon-compass"></use></svg>Dashboard</a>
-
-            <a href="/itinerary" class="side-link <%= active === '/itinerary' ? 'active' : '' %>">
-                <svg class="icon"><use href="/images/icons.svg#icon-route"></use></svg>Itinerary</a>
-
-            <a href="/trips/1/packing-list" class="side-link <%= active === '/packing-list' ? 'active' : '' %>">
-                <svg class="icon"><use href="/images/icons.svg#icon-suitcase"></use></svg>Packing List</a>
         </nav>
     <% } %>
 
-    
+
+    <form action="/logout" method="POST" class="sidebar-logout">
+        <button type="submit" class="side-link side-link-logout">
+            <svg class="icon"><use href="/images/icons.svg#icon-logout"></use></svg>Logout
+        </button>
+    </form>
 </aside>

@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>JourneySpark Travel Planner : Plan the Journey. Spark the Adventure.</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+
+<body>
+<%- include('partials/navbar') %>
+<div class="app-shell">
+    <%- include ('partials/sidebar',  { area: 'traveler', active:'/trips'}) %>
+    <div class="app-main">
+        <main class="app-content">
+            <h1>Add New Trip</h1>
+            <% if (error) { %>
+                <div class="alert alert-warning"> 
+                    <%= error %>
+                </div>
+            <% } %>
+            <form action = "/trips" method="POST" enctype="multipart/form-data">
+                <h2>Name of Trip: </h2>
+                <br>
+                <label>Trip Name: </label>
+                <input type="text" name="tripName" placeholder="Enter Trip Name" required>
+                <br><br>
+                <label> Destination: </label>
+                <input type="text" name="destination" placeholder="Enter destination" required>
+                <br><br>
+                <label>Start Date:</label>
+                <input type="date" name="startDate" placeholder="Enter start date" required>
+                
+                <br><br>
+                <label> End Date: </label>
+                <input type="date" name="endDate" placeholder="Enter end date" required>
+                <br><br>
+                <label>Image:</label>
+                <input type="file" name="image" accept="image/*">
+                <br><br>
+                
+                <button type="submit">Save Trip</button>
+
+                <a href="/trips" class="btn btn-secondary">Back</a>
+
+
+
+
+            
+
+            
+            </form>
+        </main>
+    </div>
+</div>
+</body>
+</html>

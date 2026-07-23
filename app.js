@@ -1,8 +1,14 @@
 // ==================================================
-// Authentication, Authorization & Budget Management
+// Authentication & Authorisation:
+// Registration -> validation -> bcrypt hash using SHA1 hash -> MySQL insert
+// -> Login -> session -> checkAuthenticated -> checkAdmin
+// -> page shown or access denied -> logout destroys session
 // ==================================================
+// Silence internal dependency deprecation warnings (e.g. util.isArray in mysql2 sub-packages)
+process.noDeprecation = true;
 
 require('dotenv').config();
+
 
 const express = require('express');
 const mysql = require('mysql2');
@@ -10,39 +16,96 @@ const session = require('express-session');
 const flash = require('connect-flash');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
+const multer = require('multer');
+const itineraryRoutes = require('./routes/itinerary');
 
 const app = express();
 const port = process.env.PORT || 3000;
 
 // ==================================================
-// Database Connection
+// Database connection (credentials come
+// from environment variables, never hardcoded)
+// Azure MySQL requires SSL, so set DB_SSL=true in .env
+// when using the Azure database (leave it out for localhost).
 // ==================================================
 const db = mysql.createConnection({
-    host: process.env.DB_HOST,
-    port: process.env.DB_PORT,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
-    ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: true } : undefined
+    host: "c237-asyraf-mysql.mysql.database.azure.com",
+    user: "c237_007",
+    password: "c237007@2026!",
+    database: "c237_007_team4_travelplanner",
+    ssl: {
+        rejectUnauthorized: true
+    }
 });
 
 db.connect((err) => {
     if (err) {
         console.error('Could not connect to MySQL:', err.message);
         console.error('Check your .env values (and DB_SSL=true for Azure).');
-    } else {
-        console.log('Connected to MySQL database.');
+        return;
     }
+
+    console.log('Connected to MySQL database.');
+
+    // Auto-create the table in whichever database Node is connected to
+    const initTableSql = `
+        CREATE TABLE IF NOT EXISTS packing_items (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            trip_id INT NOT NULL DEFAULT 1,
+            item_name VARCHAR(255) NOT NULL,
+            category VARCHAR(100) NOT NULL DEFAULT 'Misc',
+            quantity INT NOT NULL DEFAULT 1,
+            is_packed TINYINT(1) NOT NULL DEFAULT 0,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_packing_trip (trip_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `;
+
+    db.query(initTableSql, (tableErr) => {
+        if (tableErr) {
+            console.error('Error initializing packing_items table:', tableErr.message);
+            return;
+        }
+
+        db.query('SELECT COUNT(*) AS count FROM packing_items', (countErr, results) => {
+            if (countErr) {
+                console.error('Error checking packing_items count:', countErr.message);
+                return;
+            }
+
+            if (results[0].count === 0) {
+                const seedSql = `
+                    INSERT INTO packing_items (trip_id, item_name, category, quantity, is_packed) VALUES
+                    (1, 'Passport & Visa', 'Documents', 1, 1),
+                    (1, 'Phone Charger', 'Electronics', 1, 0),
+                    (1, 'T-Shirts', 'Clothing', 5, 0),
+                    (1, 'Toothbrush', 'Toiletries', 1, 1);
+                `;
+                db.query(seedSql, (seedErr) => {
+                    if (seedErr) {
+                        console.error('Error seeding packing_items:', seedErr.message);
+                        return;
+                    }
+                    console.log('Sample packing items seeded!');
+                });
+            }
+        });
+    });
 });
 
 db.on('error', (err) => {
     console.error('MySQL connection error:', err.message);
 });
 
+
 // ==================================================
 // App Setup
 // ==================================================
 app.set('view engine', 'ejs');
+// Trust Render's reverse proxy so req.secure is detected correctly.
+// Without this, express-session silently refuses to set secure cookies
+// because it can't see past the proxy to confirm HTTPS.
+app.set('trust proxy', 1);
 app.use(express.urlencoded({ extended: false }));
 app.use(express.static('public'));
 
@@ -102,6 +165,8 @@ const checkAuthenticated = (req, res, next) => {
     res.redirect('/login');
 };
 
+// Authorisation: does the logged-in user have the admin role?
+// Safe even when req.session.user is undefined.
 const checkAdmin = (req, res, next) => {
     if (req.session.user && req.session.user.role === 'admin') {
         return next();
@@ -109,6 +174,9 @@ const checkAdmin = (req, res, next) => {
     req.flash('error', "You don't have permission to access that page.");
     res.redirect('/');
 };
+
+// Default available categories for packing
+const PACKING_CATEGORIES = ['Clothing', 'Toiletries', 'Electronics', 'Documents', 'Medical / First Aid', 'Misc'];
 
 // ==================================================
 // Public Routes
@@ -153,7 +221,7 @@ app.post('/register', validateRegistration, (req, res) => {
                 return res.redirect('/register');
             }
 
-            const insertSql = 'INSERT INTO users (fullName, email, passwordHash, role, totalBudget) VALUES (?, ?, ?, \'traveler\', 1000.00)';
+            const insertSql = "INSERT INTO users (fullName, email, passwordHash, role) VALUES (?, ?, ?, 'traveler')";
             db.query(insertSql, [fullName.trim(), email, passwordHash], (insertErr) => {
                 if (insertErr) {
                     console.error(insertErr);
@@ -166,6 +234,255 @@ app.post('/register', validateRegistration, (req, res) => {
         });
     });
 });
+
+const storage = multer.diskStorage(
+{
+    destination: function (req,file,cb)
+    {
+        cb(null, 'public/images/');
+    },
+
+    filename: function (req,file,cb)
+    {
+        cb(null, file.originalname);
+    }
+    
+});
+
+const upload = multer({
+    storage: storage
+});
+
+app.get('/trips', checkAuthenticated, (req,res)=> {
+    const userId = req.session.user.userId;
+    
+    const destination = req.query.destination;
+    const status = req.query.status;
+    
+
+    let sql = 'SELECT * FROM trips WHERE userId = ?';
+    let values= [userId];
+
+    if (destination){
+        sql +=' AND destination LIKE ?';
+        values.push('%' + destination +  '%');
+    }
+    if (status) {
+        sql +='AND status = ?';
+        values.push(status)
+    }
+   
+  
+
+    db.query(sql,values,(err,results) =>{
+        if(err)
+        {
+            return res.send('Error loading trips');
+        }
+        
+        res.render('trips',
+        {   
+            trips:results
+
+        });
+    });
+});
+    
+
+
+
+app.get('/trips/new', checkAuthenticated, (req,res)=>{
+    res.render('NewTrip',{
+        error:null
+    });
+});
+
+// It will goes to the trip.ejs page and check if the user is authenticated 
+// it will check for userId, tripName, destination, startDate and endDate
+
+app.post('/trips', checkAuthenticated, upload.single('image'), (req,res)=>{
+    console.log(req.body);
+   const userId = req.session.user.userId;
+    const tripName = req.body.tripName;
+    const destination= req.body.destination;
+    const startDate = req.body.startDate;
+    const endDate = req.body.endDate;
+    const image = req.file ? req.file.filename : null;
+
+    // Get today date
+    const today = new Date ();
+    today.setHours(0,0,0,0);
+    // Convert user's input into Dates
+    const start = new Date (startDate);
+    start.setHours(0,0,0,0);
+    const end = new Date (endDate);
+    end.setHours(0,0,0,0);
+
+    // Calculate the trip status
+    let status;
+    if (today < start) 
+    {
+        status = "Upcoming";
+    }
+    else if (today > end)
+    {
+        status = "Completed";
+    }
+    else 
+    {
+        status = "Ongoing";
+    }
+    console.log("Status:", status);
+
+    // Check for invalid Date and ensures that endDate is before the startDate.
+    if (end < start) 
+    {
+         return res.render('NewTrip',{
+            error: "End Date cannot be before the Start Date."
+
+    });
+
+    }
+        
+    db.query(
+        'INSERT INTO trips (userId,tripName, destination, startDate, endDate,status,image) VALUES (?,?,?,?,?,?,?)',
+        [userId,tripName, destination, startDate,endDate,status,image],
+        (err, result) => {
+            if(err) {
+                console.log(err);
+                return res.send('Error saving trip');
+            }
+            res.redirect('/trips');
+        }
+    );
+    
+});
+
+app.get('/trips/:id',checkAuthenticated,(req,res)=>{
+    const userId = req.session.user.userId;
+    const tripId = req.params.id;
+    db.query('SELECT * FROM trips WHERE tripId = ? AND userId = ?', [tripId, userId], (err,results)=>{
+    
+        if (err) return res.send('Error loading trip ');
+        if (results.length === 0) return res.send('Trip not found');
+        res.render('trip-details',{trip: results[0]});
+
+    });
+})
+app.post('/trips/:id/delete', checkAuthenticated,(req,res)=>{
+    // Which user?
+    const userId = req.session.user.userId;
+    //Which trip ?
+    const tripId = req.params.id;
+    db.query('DELETE FROM trips WHERE tripId = ? AND userId = ?', [tripId, userId],(err) =>{
+        if(err) return res.send('Error deleting');
+        res.redirect('/trips');
+    });
+});
+app.get('/trips/:id/edit',checkAuthenticated,(req,res)=>{
+    const userId = req.session.user.userId;
+    const tripId = req.params.id;
+    console.log('Trip ID:',tripId);
+    console.log('User ID:',userId);
+
+    db.query('SELECT * FROM trips WHERE tripId = ? AND userId = ?',[tripId, userId],(err,results)=>{
+        if (err) 
+            {
+                return res.send('Error loading trips');
+            }
+        if (results.length === 0)
+        {   
+            return res.send('Trip not found');
+
+        }
+    
+        res.render('EditTrip', {trip:results[0]});
+    });
+});
+app.post('/trips/:id/edit',checkAuthenticated,(req,res)=>{
+
+    const userId = req.session.user.userId;
+    const tripId = req.params.id;
+    const tripName = req.body.tripName;
+    const destination= req.body.destination;
+    const startDate = req.body.startDate;
+    const endDate = req.body.endDate;
+
+    
+
+    // Get today date
+    const today = new Date ();
+    today.setHours(0,0,0,0);
+    // Convert user's input into Dates
+    const start = new Date (startDate);
+    start.setHours(0,0,0,0);
+    const end = new Date (endDate);
+    end.setHours(0,0,0,0);
+
+    // Calculate the trip status
+    let status;
+    if (today < start) 
+    {
+        status = "Upcoming";
+    }
+    else if (today > end)
+    {
+        status = "Completed";
+    }
+    else 
+    {
+        status = "Ongoing";
+    }
+
+    db.query(
+        'UPDATE trips SET tripName = ? , destination = ?, startDate = ?, endDate = ?, status = ? WHERE tripId = ? AND userId = ?',
+        [tripName, destination,startDate,endDate,status,tripId,userId], (err,result) =>
+        {
+            if (err)
+            {
+                console.log(err);
+                return res.send("Error updating trip");
+            }
+
+            res.redirect('/trips')
+        }
+    )
+
+});
+
+
+    
+
+
+
+
+
+// NOTE: a duplicate/broken 'app.post('/trips/:id', ...)' route used to
+// live here. It was dead code (no form in the app posts to that path —
+// they all use '/trips/:id/edit') and had a crash bug (referenced an
+// undefined 'tripId' variable). Removed since '/trips/:id/edit' above
+// already handles updating a trip correctly.
+
+
+    
+
+    
+
+
+
+
+
+       
+
+            
+
+
+
+
+
+
+
+
 
 // ---------- Login ----------
 app.get('/login', (req, res) => {
@@ -230,7 +547,7 @@ app.post('/login', (req, res) => {
     });
 });
 
-// ---------- Forgot Password & Reset ----------
+// ---------- Forgot Password ----------
 app.get('/forgot-password', (req, res) => {
     res.render('forgot_password', {
         messages: req.flash('success'),
@@ -275,6 +592,7 @@ app.post('/forgot-password', (req, res) => {
     });
 });
 
+// ---------- Reset password ----------
 app.get('/reset-password/:token', (req, res) => {
     const tokenHash = crypto.createHash('sha256').update(req.params.token).digest('hex');
     const sql = 'SELECT userId FROM users WHERE resetTokenHash = ? AND resetTokenExpiry > NOW()';
@@ -551,12 +869,332 @@ app.post('/budget/delete/:id', checkAuthenticated, (req, res) => {
 });
 
 // ==================================================
-// Admin Routes
+// Itinerary & Activity Management (Shu Koon)
 // ==================================================
-app.get('/admin', checkAuthenticated, checkAdmin, (req, res) => {
-    res.render('admin', {
+
+// GET /itinerary — pick which trip to view/plan the itinerary for
+// (entry point from the navbar/sidebar/homepage, same idea as /budget)
+app.get('/itinerary', checkAuthenticated, (req, res) => {
+    const userId = req.session.user.userId;
+    const sql = 'SELECT * FROM trips WHERE userId = ? ORDER BY startDate ASC';
+
+    db.query(sql, [userId], (err, trips) => {
+        if (err) {
+            console.error(err);
+            req.flash('error', 'Could not load your trips.');
+            trips = [];
+        }
+        res.render('itinerary-trips', {
+            trips,
+            messages: req.flash('success'),
+            errors: req.flash('error')
+        });
+    });
+});
+
+// // Itinerary & Activity Management (Shu Koon) — every route below is
+// // protected inside routes/itinerary.js (login required + must own the trip)
+app.use('/trips/:tripId/itinerary', itineraryRoutes(db, checkAuthenticated));
+
+// ==================================================
+// PACKING LIST ROUTES 
+// ==================================================
+
+// 1. VIEW PACKING LIST (or default for trip)
+app.get('/trips/:tripId/packing-list', checkAuthenticated, (req, res) => {
+    const tripId = req.params.tripId;
+    const filterStatus = req.query.filterStatus || 'all';
+    const filterCategory = req.query.filterCategory || 'All';
+
+    // Fetch all items for overall stats calculation
+    let sqlAll = 'SELECT * FROM packing_items WHERE trip_id = ?';
+    db.query(sqlAll, [tripId], (err, allItems) => {
+        if (err) {
+            console.error(err);
+            req.flash('error', 'Could not load packing list.');
+            return res.redirect('/dashboard');
+        }
+
+        const totalItems = allItems.length;
+        // Handles both numbers (1) and booleans (true) reliably
+        const packedCount = allItems.filter(i => Number(i.is_packed) === 1 || i.is_packed === true).length;
+        const unpackedCount = totalItems - packedCount;
+        const overallProgress = totalItems > 0 ? Math.round((packedCount / totalItems) * 100) : 0;
+        
+        // Category breakdown calculation
+        const categoryStats = PACKING_CATEGORIES.map(cat => {
+        const catItems = allItems.filter(i => i.category === cat);
+        const total = catItems.length;
+        const packed = catItems.filter(i => Number(i.is_packed) === 1 || i.is_packed === true).length;
+        const percentage = total > 0 ? Math.round((packed / total) * 100) : 0;
+        return { name: cat, total, packed, percentage };
+    }).filter(c => c.total > 0);
+
+        // Filter items for display
+        let filteredItems = [...allItems];
+        if (filterStatus === 'packed') filteredItems = filteredItems.filter(i => Number(i.is_packed) === 1 || i.is_packed === true);
+        if (filterStatus === 'unpacked') filteredItems = filteredItems.filter(i => !(Number(i.is_packed) === 1 || i.is_packed === true));
+        if (filterCategory !== 'All') filteredItems = filteredItems.filter(i => i.category === filterCategory);
+
+        res.render('packing-list', {
+            tripId,
+            items: filteredItems,
+            totalItems,
+            packedCount,
+            unpackedCount,
+            overallProgress,
+            categoryStats,
+            categories: PACKING_CATEGORIES,
+            filterStatus,
+            filterCategory,
+            messages: req.flash('success'),
+            errors: req.flash('error')
+        });
+    });
+});
+
+// Fallback shortcut route: /packing-list (Redirects or uses default trip 1)
+app.get('/packing-list', checkAuthenticated, (req, res) => {
+    res.redirect('/trips/1/packing-list');
+});
+
+// 2. GET ADD ITEM FORM
+app.get('/trips/:tripId/packing-list/add', checkAuthenticated, (req, res) => {
+    res.render('add-packing-item', { // <--- ✅ NOW MATCHES add-packing-item.ejs
+        tripId: req.params.tripId,
+        categories: PACKING_CATEGORIES,
         messages: req.flash('success'),
         errors: req.flash('error')
+    });
+});
+
+// 3. POST ADD ITEM
+app.post('/trips/:tripId/packing-list/add', checkAuthenticated, (req, res) => {
+    const tripId = req.params.tripId;
+    const { item_name, category, quantity } = req.body;
+
+    if (!item_name || !item_name.trim()) {
+        req.flash('error', 'Item name is required.');
+        return res.redirect(`/trips/${tripId}/packing-list/add`);
+    }
+
+    const sql = 'INSERT INTO packing_items (trip_id, item_name, category, quantity, is_packed) VALUES (?, ?, ?, ?, 0)';
+    db.query(sql, [tripId, item_name.trim(), category || 'Misc', parseInt(quantity) || 1], (err) => {
+        if (err) {
+            console.error(err);
+            req.flash('error', 'Failed to add item.');
+            return res.redirect(`/trips/${tripId}/packing-list/add`);
+        }
+        req.flash('success', 'Item added to packing list!');
+        res.redirect(`/trips/${tripId}/packing-list`);
+    });
+});
+
+// 4. TOGGLE PACKED STATUS (Quick Checkbox)
+app.post('/packing-list/:id/toggle', checkAuthenticated, (req, res) => {
+    const itemId = req.params.id;
+    const { trip_id, is_packed } = req.body;
+
+    const sql = 'UPDATE packing_items SET is_packed = ? WHERE id = ?';
+    db.query(sql, [is_packed, itemId], (err) => {
+        if (err) console.error(err);
+        res.redirect(`/trips/${trip_id || 1}/packing-list`);
+    });
+});
+
+// 5. GET EDIT ITEM FORM
+app.get('/packing-list/:id/edit', checkAuthenticated, (req, res) => {
+    const itemId = req.params.id;
+
+    db.query('SELECT * FROM packing_items WHERE id = ?', [itemId], (err, results) => {
+        if (err || results.length === 0) {
+            req.flash('error', 'Item not found.');
+            return res.redirect('/packing-list');
+        }
+
+        res.render('edit-packing-item', {
+            item: results[0],
+            categories: PACKING_CATEGORIES,
+            messages: req.flash('success'),
+            errors: req.flash('error')
+        });
+    });
+});
+
+// 6. POST EDIT ITEM (UPDATE)
+app.post('/packing-list/:id/edit', checkAuthenticated, (req, res) => {
+    const itemId = req.params.id;
+    const { trip_id, item_name, category, quantity, is_packed } = req.body;
+
+    if (!item_name || !item_name.trim()) {
+        req.flash('error', 'Item name cannot be empty.');
+        return res.redirect(`/packing-list/${itemId}/edit`);
+    }
+
+    const sql = 'UPDATE packing_items SET item_name = ?, category = ?, quantity = ?, is_packed = ? WHERE id = ?';
+    db.query(sql, [item_name.trim(), category, parseInt(quantity) || 1, is_packed ? 1 : 0, itemId], (err) => {
+        if (err) {
+            console.error(err);
+            req.flash('error', 'Failed to update item.');
+            return res.redirect(`/packing-list/${itemId}/edit`);
+        }
+        req.flash('success', 'Item updated successfully!');
+        res.redirect(`/trips/${trip_id || 1}/packing-list`);
+    });
+});
+
+// 7. POST DELETE ITEM
+app.post('/packing-list/:id/delete', checkAuthenticated, (req, res) => {
+    const itemId = req.params.id;
+    const tripId = req.body.trip_id || 1;
+
+    const sql = 'DELETE FROM packing_items WHERE id = ?';
+    db.query(sql, [itemId], (err) => {
+        if (err) {
+            console.error(err);
+            req.flash('error', 'Failed to delete item.');
+        } else {
+            req.flash('success', 'Item deleted.');
+        }
+        res.redirect(`/trips/${tripId}/packing-list`);
+    });
+});
+
+// ==================================================
+// Admin routes
+// ==================================================
+app.get('/admin', checkAuthenticated, checkAdmin, (req, res) => {
+    // Three summary-card totals in one round trip: travelers, admins,
+    // and the destination catalog size.
+    const countsSql = `
+      SELECT
+        (SELECT COUNT(*) FROM users WHERE role = 'traveler') AS totalUsers,
+        (SELECT COUNT(*) FROM users WHERE role = 'admin')    AS totalAdmins,
+        (SELECT COUNT(DISTINCT destination) FROM trips
+         WHERE destination IS NOT NULL AND destination <> '') AS totalDestinations
+`;
+    db.query(countsSql, (err, results) => {
+        if (err) {
+            console.error(err);
+            req.flash('error', 'Could not load some dashboard totals.');
+        }
+        const counts = (results && results[0]) || { totalUsers: 0, totalAdmins: 0, totalDestinations: 0 };
+        res.render('admin', {
+            counts,
+            messages: req.flash('success'),
+            errors: req.flash('error')
+        });
+    });
+});
+
+// ---------- Manage users ----------
+app.get('/admin/users', checkAuthenticated, checkAdmin, (req, res) => {
+    const sql = 'SELECT userId, fullName, email, role, createdAt FROM users ORDER BY createdAt DESC';
+    db.query(sql, (err, users) => {
+        if (err) {
+            console.error(err);
+            req.flash('error', 'Could not load users.');
+            return res.redirect('/admin');
+        }
+        res.render('admin_users', {
+            users,
+            messages: req.flash('success'),
+            errors: req.flash('error')
+        });
+    });
+});
+
+// Promote a traveler to admin, or demote an admin back to traveler
+app.post('/admin/users/:id/role', checkAuthenticated, checkAdmin, (req, res) => {
+    const targetId = Number(req.params.id);
+    const newRole = req.body.role === 'admin' ? 'admin' : 'traveler';
+
+    if (targetId === req.session.user.userId) {
+        req.flash('error', 'You cannot change your own role.');
+        return res.redirect('/admin/users');
+    }
+
+    db.query('UPDATE users SET role = ? WHERE userId = ?', [newRole, targetId], (err) => {
+        if (err) {
+            console.error(err);
+            req.flash('error', "Could not update that user's role.");
+        } else {
+            req.flash('success', 'User role updated.');
+        }
+        res.redirect('/admin/users');
+    });
+});
+
+// Delete a user account
+app.post('/admin/users/:id/delete', checkAuthenticated, checkAdmin, (req, res) => {
+    const targetId = Number(req.params.id);
+
+    if (targetId === req.session.user.userId) {
+        req.flash('error', 'You cannot delete your own account.');
+        return res.redirect('/admin/users');
+    }
+
+    db.query('DELETE FROM users WHERE userId = ?', [targetId], (err) => {
+        if (err) {
+            console.error(err);
+            req.flash('error', 'Could not delete that user.');
+        } else {
+            req.flash('success', 'User deleted.');
+        }
+        res.redirect('/admin/users');
+    });
+});
+
+// ---------- Manage destinations ----------
+// Destinations aren't a catalog table — they're the free-text
+// `destination` field on each trip. "Managing" them here means
+// browsing the distinct values in use and, if needed, renaming one
+// (which bulk-updates every trip that uses it, e.g. to fix a typo
+// or merge "Bali" and "bali" into one spelling).
+app.get('/admin/destinations', checkAuthenticated, checkAdmin, (req, res) => {
+    const sql = `
+        SELECT destination, COUNT(*) AS tripCount
+        FROM trips
+        WHERE destination IS NOT NULL AND destination <> ''
+        GROUP BY destination
+        ORDER BY tripCount DESC, destination ASC
+    `;
+    db.query(sql, (err, destinations) => {
+        if (err) {
+            console.error(err);
+            req.flash('error', 'Could not load destinations.');
+            return res.redirect('/admin');
+        }
+        res.render('admin_destinations', {
+            destinations,
+            messages: req.flash('success'),
+            errors: req.flash('error')
+        });
+    });
+});
+
+// Rename a destination across every trip that uses it
+app.post('/admin/destinations/rename', checkAuthenticated, checkAdmin, (req, res) => {
+    const oldName = (req.body.oldName || '').trim();
+    const newName = (req.body.newName || '').trim();
+
+    if (!oldName || !newName) {
+        req.flash('error', 'Both the current and new destination name are required.');
+        return res.redirect('/admin/destinations');
+    }
+    if (oldName === newName) {
+        req.flash('error', 'That destination already has that name.');
+        return res.redirect('/admin/destinations');
+    }
+
+    db.query('UPDATE trips SET destination = ? WHERE destination = ?', [newName, oldName], (err, result) => {
+        if (err) {
+            console.error(err);
+            req.flash('error', 'Could not rename that destination.');
+        } else {
+            req.flash('success', `Renamed "${oldName}" to "${newName}" on ${result.affectedRows} trip(s).`);
+        }
+        res.redirect('/admin/destinations');
     });
 });
 

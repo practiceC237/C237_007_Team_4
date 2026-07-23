@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>JourneySpark Travel Planner : Plan the Journey. Spark the Adventure.</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<%- include('partials/navbar') %>
+<div class="app-shell">
+    <%- include ('partials/sidebar',  { area: 'traveler', active:'/trips'}) %>
+    <div class="app-main">
+        <main class="app-content">
+            <h1>My Trips</h1>
+            <a href="/trips/new" class="btn btn-primary">
+                Add New Trip
+            </a>
+            <hr>
+            <% if (trips.length === 0) {%>
+            <p>You don't have any trips yet.</p>
+            
+            <% } else { %>
+
+                <form action="/trips" method="GET">
+
+                    <input type="text" name="destination" placeholder="Search destination">
+                    <select name="status"> 
+                        <option value="">All Status</option>
+                        <option value="Upcoming">Upcoming</option>
+                        <option value="Ongoing">Ongoing</option>
+                        <option value="Completed">Completed</option>
+                    </select>
+                    <button type="submit">Search destination</button>
+
+                </form>
+
+                <% trips.forEach(trip =>{%>
+                    <div class="trip-card">
+                        <h3><%=trip.tripName %></h3>
+
+                        <p>Destination: <%= trip.destination %></p>
+                        
+
+                        <p>Date: <%= new Date (trip.startDate).toLocaleDateString() %>
+                            - 
+                            <%= new Date (trip.endDate).toLocaleDateString() %>
+                        </p>
+                        <p>Status: <%= trip.status %></p>
+                        <p></p>
+                        <% if (trip.image) { %>
+                            <img src="/images/<%= trip.image %>" alt="Trip Image" width="180">
+                        
+                        <% } %>
+                        <p></p>
+
+                        <a href="/trips/<%=trip.tripId %>" class="btn btn-secondary">View Trip Details</a>
+                            
+                        
+                            <br>
+                        <a href="/trips/<%=trip.tripId %>/edit" class="btn btn-secondary">Edit Trip</a>
+                            
+                            <br>
+
+                        
+
+                        <form action="/trips/<%=trip.tripId %>/delete " method="POST">
+                            <button type="submit" class="btn btn-outline-danger" onclick="return confirm('Do you want to delete this trip?')">Delete</button>
+                        
+                       
+                    
+
+                        </form>
+                      
+
+                    </div>
+                   
+                        
+                    <hr>
+                       
+                <% }) %>
+            <% } %>
+               <a href="/" class="btn btn-secondary">Back</a>
+
+        
+            
+                        
+        </main>
+    </div>
+</div>
+</body>
+</html>
+
+

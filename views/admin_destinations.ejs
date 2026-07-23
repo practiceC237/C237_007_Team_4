@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Manage Destinations : JourneySpark Travel Planner</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="app-body">
+    <%- include('partials/navbar') %>
+
+    <div class="app-shell">
+        <div class="app-main">
+            <main class="app-content">
+                <%- include('partials/alerts') %>
+
+                <section class="welcome-row">
+                    <a href="/admin" class="back-link">&larr; Back to Admin Dashboard</a>
+                    <h1>Manage Destinations</h1>
+                    <p>Destinations come from what travelers type into their trips, so there's nothing to
+                       add or delete here directly &mdash; but you can rename one to fix a typo or merge
+                       duplicate spellings (e.g. "Bali" and "bali"). Renaming updates every trip using it.</p>
+                </section>
+
+                <% if (destinations.length === 0) { %>
+                    <section class="empty-panel">
+                        <svg class="icon empty-panel-icon"><use href="/images/icons.svg#icon-route"></use></svg>
+                        <h2>No destinations yet</h2>
+                        <p class="empty-state">Destinations will show up here once travelers start creating trips.</p>
+                    </section>
+                <% } else { %>
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Destination</th>
+                                    <th>Trips</th>
+                                    <th>Rename</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% destinations.forEach(function(d) { %>
+                                    <tr>
+                                        <td><%= d.destination %></td>
+                                        <td><%= d.tripCount %></td>
+                                        <td>
+                                            <form action="/admin/destinations/rename" method="POST" class="table-actions"
+                                                  onsubmit="return confirm('Rename this destination on all ' + this.dataset.count + ' trip(s) that use it?');"
+                                                  data-count="<%= d.tripCount %>">
+                                                <input type="hidden" name="oldName" value="<%= d.destination %>">
+                                                <input type="text" name="newName" class="form-control"
+                                                       placeholder="New name" style="max-width: 180px;" required>
+                                                <button type="submit" class="btn btn-outline btn-sm">Rename</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                <% }); %>
+                            </tbody>
+                        </table>
+                    </div>
+                <% } %>
+            </main>
+        </div>
+    </div>
+    <script src="/js/auth.js"></script>
+</body>
+</html>

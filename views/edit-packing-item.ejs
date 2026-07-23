@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Edit Packing Item - JourneySpark</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="app-body">
+    <%- include('partials/navbar') %>
+    
+    <main class="app-content">
+        <%- include('partials/alerts') %>
+        <div class="packing-card" style="max-width: 600px; margin: 0 auto;">
+            <h2>Edit Packing Item</h2>
+            
+            <form method="POST" action="/packing-list/<%= item.id %>/edit">
+                <input type="hidden" name="trip_id" value="<%= item.trip_id %>">
+
+                <div class="form-group">
+                    <label for="item_name">Item Name *</label>
+                    <input type="text" id="item_name" name="item_name" value="<%= item.item_name %>" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="category">Category</label>
+                    <input type="text" id="category" name="category" value="<%= item.category %>">
+                </div>
+
+                <div class="form-group">
+                    <label for="quantity">Quantity</label>
+                    <input type="number" id="quantity" name="quantity" value="<%= item.quantity %>" min="1">
+                </div>
+
+                <div class="form-group">
+                    <label for="is_packed">
+                        <input type="checkbox" id="is_packed" name="is_packed" value="1" <%= item.is_packed ? 'checked' : '' %>>
+                        Marked as Packed
+                    </label>
+                </div>
+
+                <div class="form-actions" style="display: flex; gap: 12px; margin-top: 16px;">
+                    <button type="submit" class="btn btn-primary">Update Item</button>
+                    <a href="/trips/<%= item.trip_id %>/packing-list" class="btn btn-white">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </main>
+</body>
+</html>

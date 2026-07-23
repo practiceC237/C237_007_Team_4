@@ -11,7 +11,7 @@
 </head>
 
 <body class="app-body">
-    <%- include('partials/apptopbar') %>
+    <%- include('partials/navbar') %>
 
         <div class="app-shell">
                 <div class="app-main">
@@ -65,21 +65,54 @@
                                 </div>
                             </section>
 
-                            <section class="page-header">
-                                <h1>Upcoming Trips</h1>
-                            </section>
-                            <section class="empty-panel">
-                                <svg class="icon empty-panel-icon">
-                                    <use href="/images/icons.svg#icon-plane"></use>
-                                </svg>
-                                <h2>No trips yet</h2>
-                                <p class="empty-state">Your upcoming journeys will appear here once the My Trips feature
-                                    is connected.</p>
-                            </section>
-                    </main>
-                </div>
+                <!-- Stat cards -->
+                <section class="stat-grid">
+                    <div class="stat-card">
+                        <span class="stat-icon"><svg class="icon"><use href="/images/icons.svg#icon-plane"></use></svg></span>
+                        <div>
+                            <div class="stat-value">&mdash;</div>
+                            <div class="stat-label">Upcoming Trips</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-icon"><svg class="icon"><use href="/images/icons.svg#icon-pin"></use></svg></span>
+                        <div>
+                            <div class="stat-value">&mdash;</div>
+                            <div class="stat-label">Destinations</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-icon"><svg class="icon"><use href="/images/icons.svg#icon-wallet"></use></svg></span>
+                        <div>
+                            <div class="stat-value">&mdash;</div>
+                            <div class="stat-label">Budget Spent</div>
+                        </div>
+                    </div>
+
+                    <!-- Made Packing Progress card clickable -->
+                    <a href="/trips/1/packing-list" class="stat-card" style="text-decoration: none; color: inherit;">
+                        <span class="stat-icon"><svg class="icon"><use href="/images/icons.svg#icon-suitcase"></use></svg></span>
+                        <div>
+                            <div class="stat-value">View</div>
+                            <div class="stat-label">Packing Progress &rarr;</div>
+                        </div>
+                    </a>
+                </section>
+
+                <section class="page-header">
+                    <h1>Upcoming Trips</h1>
+                </section>
+                <section class="empty-panel">
+                    <svg class="icon empty-panel-icon"><use href="/images/icons.svg#icon-plane"></use></svg>
+                    <h2>No trips yet</h2>
+                    <p class="empty-state">Your upcoming journeys will appear here once the My Trips feature is connected.</p>
+                    
+                    <br>
+                    <!-- Quick link button -->
+                    <a href="/trips/1/packing-list" class="btn btn-primary">Open Packing List</a>
+                </section>
+            </main>
         </div>
         <script src="/js/auth.js"></script>
 </body>
-
 </html>

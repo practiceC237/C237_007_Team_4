@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Packing List - JourneySpark</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="app-body">
+    <!-- Main Header & Navigation -->
+    <%- include('partials/navbar') %>
+
+    <div class="app-shell">
+        <main class="app-content">
+            <%- include('partials/alerts') %>
+
+            <div class="dashboard-header">
+                <div>
+                    <h1>Trip Packing List</h1>
+                    <p class="subtitle">Keep track of essential items before takeoff</p>
+                </div>
+<a href="/trips/<%= tripId %>/packing-list/add" class="btn btn-primary">+ Add Item</a>            </div>
+
+            <!-- Stats Bar -->
+            <div class="stats-grid" style="margin-bottom: 24px;">
+                <div class="stat-card">
+                    <span class="stat-label">Progress</span>
+                    <span class="stat-value"><%= overallProgress || 0 %>%</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">Total Items</span>
+                    <span class="stat-value"><%= totalItems || 0 %></span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">Packed</span>
+                    <span class="stat-value"><%= packedCount || 0 %></span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">Remaining</span>
+                    <span class="stat-value"><%= unpackedCount || 0 %></span>
+                </div>
+            </div>
+
+            <!-- Packing Table Container -->
+            <div class="card">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Done</th>
+                            <th>Item</th>
+                            <th>Category</th>
+                            <th>Qty</th>
+                            <th style="text-align: right;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% if (items && items.length > 0) { %>
+                            <% items.forEach(item => { %>
+                                <tr>
+                                <td>
+                                  <form action="/packing-list/<%= item.id %>/toggle" method="POST" style="margin:0; padding:0;">
+                                    <input type="hidden" name="trip_id" value="<%= tripId %>">
+                                    <input type="hidden" name="is_packed" value="<%= Number(item.is_packed) === 1 ? 0 : 1 %>">
+                                    <input 
+                                      type="checkbox" 
+                                      <%= Number(item.is_packed) === 1 ? 'checked' : '' %>
+                                    onchange="this.form.submit()"
+                                    >
+                                  </form>
+                                </td>
+                                    <td><strong><%= item.item_name %></strong></td>
+                                    <td><span class="badge"><%= item.category || 'Uncategorized' %></span></td>
+                                    <td><%= item.quantity %></td>
+                                    <td style="text-align: right;">
+                                        <a href="/packing-list/<%= item.id %>/edit" class="btn btn-sm btn-white">Edit</a>
+                                        <form action="/packing-list/<%= item.id %>/delete" method="POST" style="display:inline;">
+                                            <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            <% }) %>
+                        <% } else { %>
+                            <tr>
+                                <td colspan="5" style="text-align: center; padding: 32px;">No items found. Add your first packing item!</td>
+                            </tr>
+                        <% } %>
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+</body>
+</html>
