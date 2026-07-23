@@ -33,7 +33,8 @@ const db = mysql.createConnection({
     user: "c237_007",
     password: "c237007@2026!",
     database: "c237_007_team4_travelplanner",
-    ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : undefined,
+    ssl: {
+        rejectUnauthorized: true
 });
 
 db.connect((err) => {
