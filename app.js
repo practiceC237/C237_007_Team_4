@@ -17,11 +17,7 @@ const flash = require('connect-flash');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const multer = require('multer');
-
- 
-
-// // Import Shu Koon's Itinerary Router
-// const itineraryRoutes = require('./routes/itinerary');
+const itineraryRoutes = require('./routes/itinerary');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -37,6 +33,7 @@ const db = mysql.createConnection({
     user: "c237_007",
     password: "c237007@2026!",
     database: "c237_007_team4_travelplanner",
+    ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : undefined,
 });
 
 db.connect((err) => {
@@ -289,7 +286,7 @@ app.get('/trips', checkAuthenticated, (req,res)=> {
 
 
 app.get('/trips/new', checkAuthenticated, (req,res)=>{
-    res.render('Newtrip',{
+    res.render('NewTrip',{
         error:null
     });
 });
@@ -454,47 +451,11 @@ app.post('/trips/:id/edit',checkAuthenticated,(req,res)=>{
 
 
 
-app.post('/trips/:id',checkAuthenticated,(req,res)=> 
-{
-    const userId = req.session.user.userId;
-    const tripName = req.body.tripName;
-    const destination= req.body.destination;
-    const startDate = req.body.startDate;
-    const endDate = req.body.endDate;
-
-     // Get today date
-    const today = new Date ();
-    today.setHours(0,0,0,0);
-    // Convert user's input into Dates
-    const start = new Date (startDate);
-    start.setHours(0,0,0,0);
-    const end = new Date (endDate);
-    end.setHours(0,0,0,0);
-
-    let status;
-    if (today < start) 
-    {
-        status = "Upcoming";
-    }
-    else if (today > end)
-    {
-        status = "Completed";
-    }
-    else 
-    {
-        status = "Ongoing";
-    }
-
-    db.query(
-       'UPDATE trips SET tripName = ?, destination = ? , startDate = ?, endDate = ?, status = ? WHERE tripID = ? AND userId = ?',
-       [tripName,destination,startDate,endDate,status,tripId,userId],
-       (err) => 
-        {
-            if (err) return res.send('Error updating trips');
-            res.redirect('/trips/',tripId);
-       }
-    );
-});
+// NOTE: a duplicate/broken 'app.post('/trips/:id', ...)' route used to
+// live here. It was dead code (no form in the app posts to that path —
+// they all use '/trips/:id/edit') and had a crash bug (referenced an
+// undefined 'tripId' variable). Removed since '/trips/:id/edit' above
+// already handles updating a trip correctly.
 
 app.get('/trips/:id/share',checkAuthenticated,(req,res)=>{
 
@@ -911,9 +872,33 @@ app.post('/budget/delete/:id', checkAuthenticated, (req, res) => {
     });
 });
 
+// ==================================================
+// Itinerary & Activity Management (Shu Koon)
+// ==================================================
+
+// GET /itinerary — pick which trip to view/plan the itinerary for
+// (entry point from the navbar/sidebar/homepage, same idea as /budget)
+app.get('/itinerary', checkAuthenticated, (req, res) => {
+    const userId = req.session.user.userId;
+    const sql = 'SELECT * FROM trips WHERE userId = ? ORDER BY startDate ASC';
+
+    db.query(sql, [userId], (err, trips) => {
+        if (err) {
+            console.error(err);
+            req.flash('error', 'Could not load your trips.');
+            trips = [];
+        }
+        res.render('itinerary-trips', {
+            trips,
+            messages: req.flash('success'),
+            errors: req.flash('error')
+        });
+    });
+});
+
 // // Itinerary & Activity Management (Shu Koon) — every route below is
 // // protected inside routes/itinerary.js (login required + must own the trip)
-// app.use('/trips/:tripId/itinerary', itineraryRoutes(db, checkAuthenticated));
+app.use('/trips/:tripId/itinerary', itineraryRoutes(db, checkAuthenticated));
 
 // ==================================================
 // PACKING LIST ROUTES 

@@ -9,7 +9,10 @@
         <nav class="sidebar-nav">
             <a href="/dashboard" class="side-link <%= active === '/dashboard' ? 'active' : '' %>">
                 <svg class="icon"><use href="/images/icons.svg#icon-compass"></use></svg>Dashboard</a>
-            
+
+            <a href="/itinerary" class="side-link <%= active === '/itinerary' ? 'active' : '' %>">
+                <svg class="icon"><use href="/images/icons.svg#icon-route"></use></svg>Itinerary</a>
+
             <a href="/trips/1/packing-list" class="side-link <%= active === '/packing-list' ? 'active' : '' %>">
                 <svg class="icon"><use href="/images/icons.svg#icon-suitcase"></use></svg>Packing List</a>
         </nav>
