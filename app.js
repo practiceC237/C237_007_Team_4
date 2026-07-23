@@ -17,11 +17,7 @@ const flash = require('connect-flash');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const multer = require('multer');
-
- 
-
-// // Import Shu Koon's Itinerary Router
-// const itineraryRoutes = require('./routes/itinerary');
+const itineraryRoutes = require('./routes/itinerary');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -33,12 +29,13 @@ const port = process.env.PORT || 3000;
 // when using the Azure database (leave it out for localhost).
 // ==================================================
 const db = mysql.createConnection({
-    host: process.env.DB_HOST,
-    port: process.env.DB_PORT,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
-    ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: true } : undefined
+    host: "c237-asyraf-mysql.mysql.database.azure.com",
+    user: "c237_007",
+    password: "c237007@2026!",
+    database: "c237_007_team4_travelplanner",
+    ssl: {
+        rejectUnauthorized: true
+    }
 });
 
 db.connect((err) => {
@@ -100,10 +97,15 @@ db.on('error', (err) => {
     console.error('MySQL connection error:', err.message);
 });
 
+
 // ==================================================
 // App Setup
 // ==================================================
 app.set('view engine', 'ejs');
+// Trust Render's reverse proxy so req.secure is detected correctly.
+// Without this, express-session silently refuses to set secure cookies
+// because it can't see past the proxy to confirm HTTPS.
+app.set('trust proxy', 1);
 app.use(express.urlencoded({ extended: false }));
 app.use(express.static('public'));
 
@@ -290,7 +292,7 @@ app.get('/trips', checkAuthenticated, (req,res)=> {
 
 
 app.get('/trips/new', checkAuthenticated, (req,res)=>{
-    res.render('Newtrip',{
+    res.render('NewTrip',{
         error:null
     });
 });
@@ -455,109 +457,18 @@ app.post('/trips/:id/edit',checkAuthenticated,(req,res)=>{
 
 
 
-app.post('/trips/:id',checkAuthenticated,(req,res)=> 
-{
-    const userId = req.session.user.userId;
-    const tripName = req.body.tripName;
-    const destination= req.body.destination;
-    const startDate = req.body.startDate;
-    const endDate = req.body.endDate;
+// NOTE: a duplicate/broken 'app.post('/trips/:id', ...)' route used to
+// live here. It was dead code (no form in the app posts to that path —
+// they all use '/trips/:id/edit') and had a crash bug (referenced an
+// undefined 'tripId' variable). Removed since '/trips/:id/edit' above
+// already handles updating a trip correctly.
 
-     // Get today date
-    const today = new Date ();
-    today.setHours(0,0,0,0);
-    // Convert user's input into Dates
-    const start = new Date (startDate);
-    start.setHours(0,0,0,0);
-    const end = new Date (endDate);
-    end.setHours(0,0,0,0);
-
-    let status;
-    if (today < start) 
-    {
-        status = "Upcoming";
-    }
-    else if (today > end)
-    {
-        status = "Completed";
-    }
-    else 
-    {
-        status = "Ongoing";
-    }
-
-    db.query(
-       'UPDATE trips SET tripName = ?, destination = ? , startDate = ?, endDate = ?, status = ? WHERE tripID = ? AND userId = ?',
-       [tripName,destination,startDate,endDate,status,tripId,userId],
-       (err) => 
-        {
-            if (err) return res.send('Error updating trips');
-            res.redirect('/trips/',tripId);
-       }
-    );
-});
-
-app.get('/trips/:id/share',checkAuthenticated,(req,res)=>{
-
-    const tripId = req.params.id;
-    const email = req.body.email;
-
-    res.render('ShareTrip',{
-        tripId: tripId
-    });
-});
-app.post('/trips/:id/share',checkAuthenticated,(req,res) =>{
-    const tripId = req.params.id;
-
-    // Enter email
-    const email = req.body.email;
 
     
 
-    db.query(
-        'SELECT userId FROM users WHERE email=?',[email],(err,results) => {
-            if (err){
-                return res.send("Database Error");
-            }
-            if (results.length === 0){
-                return res.send("User not found");
-            }
+    
 
-            const sharedUserId = results[0].userId;
 
-            db.query('INSERT INTO trip_share (trip_id, user_id, status) VALUES (?,?,?)',[tripId,sharedUserId,'Pending'],
-                (err) => 
-                {
-                    if (err){
-                        console.log(err);
-                        return res.send("Error sharing trip.");
-                    }
-
-                    res.send("Trip shared successfully!");
-                }
-            );
-        }
-    );
-
-});
-
-app.get('/ShareTrip', checkAuthenticated,(req,res)=>{
-    const userId = req.session.user.userId;
-
-    db.query('SELECT trip_share.trip_id, trip_share.status, trips.tripId,trips.tripName,trips.destination FROM trip_share JOIN trips ON trip_share.trip_id = trips.tripId WHERE trip_share.user_id =?',[userId],(err,results)=>{
-        if (err) 
-        {
-            console.log(err);
-            return res.send("Database Error");
-        }
-        
-        res.render("ShareTrip",{
-            trips: results
-        });
-    }
-);
-});
-        
 
 
 
@@ -957,9 +868,33 @@ app.post('/budget/delete/:id', checkAuthenticated, (req, res) => {
     });
 });
 
+// ==================================================
+// Itinerary & Activity Management (Shu Koon)
+// ==================================================
+
+// GET /itinerary — pick which trip to view/plan the itinerary for
+// (entry point from the navbar/sidebar/homepage, same idea as /budget)
+app.get('/itinerary', checkAuthenticated, (req, res) => {
+    const userId = req.session.user.userId;
+    const sql = 'SELECT * FROM trips WHERE userId = ? ORDER BY startDate ASC';
+
+    db.query(sql, [userId], (err, trips) => {
+        if (err) {
+            console.error(err);
+            req.flash('error', 'Could not load your trips.');
+            trips = [];
+        }
+        res.render('itinerary-trips', {
+            trips,
+            messages: req.flash('success'),
+            errors: req.flash('error')
+        });
+    });
+});
+
 // // Itinerary & Activity Management (Shu Koon) — every route below is
 // // protected inside routes/itinerary.js (login required + must own the trip)
-// app.use('/trips/:tripId/itinerary', itineraryRoutes(db, checkAuthenticated));
+app.use('/trips/:tripId/itinerary', itineraryRoutes(db, checkAuthenticated));
 
 // ==================================================
 // PACKING LIST ROUTES 
@@ -1129,13 +1064,15 @@ app.post('/packing-list/:id/delete', checkAuthenticated, (req, res) => {
 // Admin routes
 // ==================================================
 app.get('/admin', checkAuthenticated, checkAdmin, (req, res) => {
+    // Three summary-card totals in one round trip: travelers, admins,
+    // and the destination catalog size.
     const countsSql = `
-        SELECT
-            (SELECT COUNT(*) FROM users WHERE role = 'traveler') AS totalUsers,
-            (SELECT COUNT(*) FROM users WHERE role = 'admin')    AS totalAdmins,
-            (SELECT COUNT(DISTINCT destination) FROM trips
-             WHERE destination IS NOT NULL AND destination <> '') AS totalDestinations
-    `;
+      SELECT
+        (SELECT COUNT(*) FROM users WHERE role = 'traveler') AS totalUsers,
+        (SELECT COUNT(*) FROM users WHERE role = 'admin')    AS totalAdmins,
+        (SELECT COUNT(DISTINCT destination) FROM trips
+         WHERE destination IS NOT NULL AND destination <> '') AS totalDestinations
+`;
     db.query(countsSql, (err, results) => {
         if (err) {
             console.error(err);
@@ -1152,20 +1089,8 @@ app.get('/admin', checkAuthenticated, checkAdmin, (req, res) => {
 
 // ---------- Manage users ----------
 app.get('/admin/users', checkAuthenticated, checkAdmin, (req, res) => {
-    const search = (req.query.q || '').trim();
-
-    let sql = 'SELECT userId, fullName, email, role, createdAt FROM users';
-    const params = [];
-
-    if (search) {
-        sql += ' WHERE fullName LIKE ? OR email LIKE ?';
-        const like = `%${search}%`;
-        params.push(like, like);
-    }
-
-    sql += ' ORDER BY createdAt DESC';
-
-    db.query(sql, params, (err, users) => {
+    const sql = 'SELECT userId, fullName, email, role, createdAt FROM users ORDER BY createdAt DESC';
+    db.query(sql, (err, users) => {
         if (err) {
             console.error(err);
             req.flash('error', 'Could not load users.');
@@ -1173,13 +1098,13 @@ app.get('/admin/users', checkAuthenticated, checkAdmin, (req, res) => {
         }
         res.render('admin_users', {
             users,
-            search,
             messages: req.flash('success'),
             errors: req.flash('error')
         });
     });
 });
 
+// Promote a traveler to admin, or demote an admin back to traveler
 app.post('/admin/users/:id/role', checkAuthenticated, checkAdmin, (req, res) => {
     const targetId = Number(req.params.id);
     const newRole = req.body.role === 'admin' ? 'admin' : 'traveler';
@@ -1200,6 +1125,7 @@ app.post('/admin/users/:id/role', checkAuthenticated, checkAdmin, (req, res) => 
     });
 });
 
+// Delete a user account
 app.post('/admin/users/:id/delete', checkAuthenticated, checkAdmin, (req, res) => {
     const targetId = Number(req.params.id);
 
@@ -1220,6 +1146,11 @@ app.post('/admin/users/:id/delete', checkAuthenticated, checkAdmin, (req, res) =
 });
 
 // ---------- Manage destinations ----------
+// Destinations aren't a catalog table — they're the free-text
+// `destination` field on each trip. "Managing" them here means
+// browsing the distinct values in use and, if needed, renaming one
+// (which bulk-updates every trip that uses it, e.g. to fix a typo
+// or merge "Bali" and "bali" into one spelling).
 app.get('/admin/destinations', checkAuthenticated, checkAdmin, (req, res) => {
     const sql = `
         SELECT destination, COUNT(*) AS tripCount
@@ -1242,6 +1173,7 @@ app.get('/admin/destinations', checkAuthenticated, checkAdmin, (req, res) => {
     });
 });
 
+// Rename a destination across every trip that uses it
 app.post('/admin/destinations/rename', checkAuthenticated, checkAdmin, (req, res) => {
     const oldName = (req.body.oldName || '').trim();
     const newName = (req.body.newName || '').trim();
