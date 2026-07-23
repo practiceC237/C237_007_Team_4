@@ -1797,3 +1797,183 @@ tbody tr:hover {
         overflow-x: hidden;
     }
 }
+
+/* ==================================================
+   21. PACKING LIST COMPONENT
+   ================================================== */
+
+.packing-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    box-shadow: var(--shadow-soft);
+    margin-bottom: 24px;
+}
+
+/* Progress Header Card */
+.packing-progress-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.packing-progress-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: var(--text-main);
+}
+
+.packing-progress-badge {
+    background: var(--surface-soft);
+    color: var(--primary);
+    font-weight: 700;
+    font-size: 0.85rem;
+    padding: 4px 12px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+}
+
+.packing-progress-track {
+    width: 100%;
+    height: 10px;
+    background: var(--surface-soft);
+    border-radius: 20px;
+    overflow: hidden;
+    margin-bottom: 14px;
+    border: 1px solid var(--border);
+}
+
+.packing-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--secondary) 0%, var(--success) 100%);
+    border-radius: 20px;
+    transition: width 0.3s ease;
+}
+
+.packing-progress-stats {
+    display: flex;
+    gap: 20px;
+    font-size: 0.86rem;
+    color: var(--text-muted);
+}
+
+.packing-progress-stats strong {
+    color: var(--text-main);
+}
+
+/* Packing Filters Bar */
+.packing-filter-bar {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    flex-wrap: wrap;
+}
+
+.packing-filter-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.packing-filter-group label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.packing-filter-group select {
+    width: auto;
+    padding: 8px 14px;
+}
+
+/* Packing Table Extensions */
+.packing-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.packing-table th, 
+.packing-table td {
+    vertical-align: middle;
+}
+
+.row-packed {
+    background-color: var(--surface-soft);
+    opacity: 0.8;
+}
+
+.item-name-text {
+    font-weight: 500;
+    color: var(--text-main);
+}
+
+.item-name-text.packed {
+    text-decoration: line-through;
+    color: var(--text-muted);
+}
+
+.category-badge {
+    display: inline-block;
+    font-size: 0.78rem;
+    font-weight: 600;
+    background: var(--surface-soft);
+    color: var(--primary);
+    padding: 3px 10px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+}
+
+/* Checkbox Toggle Button */
+.btn-check-toggle {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    color: var(--border);
+    font-size: 1.3rem;
+    line-height: 1;
+    transition: color 0.15s ease, transform 0.15s ease;
+}
+
+.btn-check-toggle:hover {
+    transform: scale(1.1);
+    color: var(--secondary);
+}
+
+.btn-check-toggle.checked {
+    color: var(--success);
+}
+
+/* Action Icons */
+.packing-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.btn-icon-action {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-muted);
+    padding: 6px 10px;
+    cursor: pointer;
+    font-size: 0.88rem;
+    transition: all 0.15s ease;
+}
+
+.btn-icon-action:hover {
+    background: var(--surface-soft);
+    color: var(--primary);
+}
+
+.btn-icon-delete:hover {
+    background: #fdecec;
+    border-color: #f5b8b8;
+    color: var(--danger);
+}

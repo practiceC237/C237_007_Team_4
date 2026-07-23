@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -8,22 +9,63 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/style.css">
 </head>
+
 <body class="app-body">
     <%- include('partials/apptopbar') %>
 
-    <div class="app-shell">
-        <%- include('partials/sidebar', { area: 'traveler', active: '/dashboard' }) %>
+        <div class="app-shell">
+                <div class="app-main">
+                    <main class="app-content">
+                        <%- include('partials/alerts') %>
 
-        <div class="app-main">
-            <main class="app-content">
-                <%- include('partials/alerts') %>
+                            <section class="welcome-row">
+                                <h1>Good to see you, <%= user.fullName %>! <svg class="icon">
+                                            <use href="/images/icons.svg#icon-plane"></use>
+                                        </svg></h1>
+                                <p>Here's a snapshot of your travels.</p>
+                            </section>
 
-                <section class="welcome-row">
-                    <h1>Good to see you, <%= user.fullName %>! <svg class="icon"><use href="/images/icons.svg#icon-plane"></use></svg></h1>
-                    <p>Here's a snapshot of your travels.</p>
-                </section>
+                            <!-- Stat cards: values connect to MySQL when teammates' features land -->
+                            <section class="stat-grid">
+                                <div class="stat-card">
+                                    <span class="stat-icon"><svg class="icon">
+                                            <use href="/images/icons.svg#icon-plane"></use>
+                                        </svg></span>
+                                    <div>
+                                        <div class="stat-value">&mdash;</div>
+                                        <div class="stat-label">Upcoming Trips</div>
+                                    </div>
+                                </div>
+                                <div class="stat-card">
+                                    <span class="stat-icon"><svg class="icon">
+                                            <use href="/images/icons.svg#icon-pin"></use>
+                                        </svg></span>
+                                    <div>
+                                        <div class="stat-value">&mdash;</div>
+                                        <div class="stat-label">Destinations</div>
+                                    </div>
+                                </div>
+                                <a href="/budget" class="stat-card">
+                                    <span class="stat-icon"><svg class="icon">
+                                            <use href="/images/icons.svg#icon-wallet"></use>
+                                        </svg></span>
+                                    <div>
+                                        <div class="stat-value">&mdash;</div>
+                                        <div class="stat-label">Budget Spent</div>
+                                    </div>
+                                </a>
+                                <div class="stat-card">
+                                    <span class="stat-icon"><svg class="icon">
+                                            <use href="/images/icons.svg#icon-suitcase"></use>
+                                        </svg></span>
+                                    <div>
+                                        <div class="stat-value">&mdash;</div>
+                                        <div class="stat-label">Packing Progress</div>
+                                    </div>
+                                </div>
+                            </section>
 
-                <!-- Stat cards: values connect to MySQL when teammates' features land -->
+                <!-- Stat cards -->
                 <section class="stat-grid">
                     <div class="stat-card">
                         <span class="stat-icon"><svg class="icon"><use href="/images/icons.svg#icon-plane"></use></svg></span>
@@ -46,13 +88,15 @@
                             <div class="stat-label">Budget Spent</div>
                         </div>
                     </div>
-                    <div class="stat-card">
+
+                    <!-- Made Packing Progress card clickable -->
+                    <a href="/trips/1/packing-list" class="stat-card" style="text-decoration: none; color: inherit;">
                         <span class="stat-icon"><svg class="icon"><use href="/images/icons.svg#icon-suitcase"></use></svg></span>
                         <div>
-                            <div class="stat-value">&mdash;</div>
-                            <div class="stat-label">Packing Progress</div>
+                            <div class="stat-value">View</div>
+                            <div class="stat-label">Packing Progress &rarr;</div>
                         </div>
-                    </div>
+                    </a>
                 </section>
 
                 <section class="page-header">
@@ -62,10 +106,13 @@
                     <svg class="icon empty-panel-icon"><use href="/images/icons.svg#icon-plane"></use></svg>
                     <h2>No trips yet</h2>
                     <p class="empty-state">Your upcoming journeys will appear here once the My Trips feature is connected.</p>
+                    
+                    <br>
+                    <!-- Quick link button -->
+                    <a href="/trips/1/packing-list" class="btn btn-primary">Open Packing List</a>
                 </section>
             </main>
         </div>
-    </div>
-    <script src="/js/auth.js"></script>
+        <script src="/js/auth.js"></script>
 </body>
 </html>
