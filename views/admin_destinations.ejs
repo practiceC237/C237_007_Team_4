@@ -9,16 +9,15 @@
     <link rel="stylesheet" href="/css/style.css">
 </head>
 <body class="app-body">
-    <%- include('partials/apptopbar') %>
+    <%- include('partials/navbar') %>
 
     <div class="app-shell">
-        <%- include('partials/sidebar', { area: 'admin', active: '/admin/destinations' }) %>
-
         <div class="app-main">
             <main class="app-content">
                 <%- include('partials/alerts') %>
 
                 <section class="welcome-row">
+                    <a href="/admin" class="back-link">&larr; Back to Admin Dashboard</a>
                     <h1>Manage Destinations</h1>
                     <p>Destinations come from what travelers type into their trips, so there's nothing to
                        add or delete here directly &mdash; but you can rename one to fix a typo or merge

@@ -1070,6 +1070,14 @@ input::placeholder {
     flex-wrap: wrap;
 }
 
+.back-link {
+    display: inline-block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--secondary);
+    margin-bottom: 4px;
+}
+
 .btn-block {
     width: 100%;
 }

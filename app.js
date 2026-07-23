@@ -100,6 +100,7 @@ db.on('error', (err) => {
     console.error('MySQL connection error:', err.message);
 });
 
+
 // ==================================================
 // App Setup
 // ==================================================
@@ -1087,11 +1088,12 @@ app.get('/admin', checkAuthenticated, checkAdmin, (req, res) => {
     // Three summary-card totals in one round trip: travelers, admins,
     // and the destination catalog size.
     const countsSql = `
-        SELECT
-            (SELECT COUNT(*) FROM users WHERE role = 'traveler') AS totalUsers,
-            (SELECT COUNT(*) FROM users WHERE role = 'admin')    AS totalAdmins,
-            (SELECT COUNT(*) FROM destinations)                  AS totalDestinations
-    `;
+      SELECT
+        (SELECT COUNT(*) FROM users WHERE role = 'traveler') AS totalUsers,
+        (SELECT COUNT(*) FROM users WHERE role = 'admin')    AS totalAdmins,
+        (SELECT COUNT(DISTINCT destination) FROM trips
+         WHERE destination IS NOT NULL AND destination <> '') AS totalDestinations
+`;
     db.query(countsSql, (err, results) => {
         if (err) {
             console.error(err);
@@ -1165,8 +1167,19 @@ app.post('/admin/users/:id/delete', checkAuthenticated, checkAdmin, (req, res) =
 });
 
 // ---------- Manage destinations ----------
+// Destinations aren't a catalog table — they're the free-text
+// `destination` field on each trip. "Managing" them here means
+// browsing the distinct values in use and, if needed, renaming one
+// (which bulk-updates every trip that uses it, e.g. to fix a typo
+// or merge "Bali" and "bali" into one spelling).
 app.get('/admin/destinations', checkAuthenticated, checkAdmin, (req, res) => {
-    const sql = 'SELECT destinationId, name, country, description, createdAt FROM destinations ORDER BY createdAt DESC';
+    const sql = `
+        SELECT destination, COUNT(*) AS tripCount
+        FROM trips
+        WHERE destination IS NOT NULL AND destination <> ''
+        GROUP BY destination
+        ORDER BY tripCount DESC, destination ASC
+    `;
     db.query(sql, (err, destinations) => {
         if (err) {
             console.error(err);
@@ -1181,39 +1194,26 @@ app.get('/admin/destinations', checkAuthenticated, checkAdmin, (req, res) => {
     });
 });
 
-app.post('/admin/destinations', checkAuthenticated, checkAdmin, (req, res) => {
-    const name = (req.body.name || '').trim();
-    const country = (req.body.country || '').trim();
-    const description = (req.body.description || '').trim();
+// Rename a destination across every trip that uses it
+app.post('/admin/destinations/rename', checkAuthenticated, checkAdmin, (req, res) => {
+    const oldName = (req.body.oldName || '').trim();
+    const newName = (req.body.newName || '').trim();
 
-    if (!name || !country) {
-        req.flash('error', 'Destination name and country are required.');
+    if (!oldName || !newName) {
+        req.flash('error', 'Both the current and new destination name are required.');
+        return res.redirect('/admin/destinations');
+    }
+    if (oldName === newName) {
+        req.flash('error', 'That destination already has that name.');
         return res.redirect('/admin/destinations');
     }
 
-    const sql = 'INSERT INTO destinations (name, country, description) VALUES (?, ?, ?)';
-    db.query(sql, [name, country, description || null], (err) => {
+    db.query('UPDATE trips SET destination = ? WHERE destination = ?', [newName, oldName], (err, result) => {
         if (err) {
             console.error(err);
-            if (err.code === 'ER_DUP_ENTRY') {
-                req.flash('error', 'That destination already exists.');
-            } else {
-                req.flash('error', 'Could not add that destination.');
-            }
+            req.flash('error', 'Could not rename that destination.');
         } else {
-            req.flash('success', 'Destination added.');
-        }
-        res.redirect('/admin/destinations');
-    });
-});
-
-app.post('/admin/destinations/:id/delete', checkAuthenticated, checkAdmin, (req, res) => {
-    db.query('DELETE FROM destinations WHERE destinationId = ?', [req.params.id], (err) => {
-        if (err) {
-            console.error(err);
-            req.flash('error', 'Could not delete that destination.');
-        } else {
-            req.flash('success', 'Destination deleted.');
+            req.flash('success', `Renamed "${oldName}" to "${newName}" on ${result.affectedRows} trip(s).`);
         }
         res.redirect('/admin/destinations');
     });
