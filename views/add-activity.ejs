@@ -3,13 +3,13 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Add Activity : <%= trip.title %> : JourneySpark Travel Planner</title>
+    <title>Add Activity : <%= trip.tripName %> : JourneySpark Travel Planner</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/style.css">
 </head>
 <body class="app-body">
-    <%- include('partials/apptopbar') %>
+    <%- include('partials/navbar') %>
 
     <div class="app-shell">
         <%- include('partials/sidebar', { area: 'traveler', active: '/dashboard' }) %>
@@ -21,7 +21,7 @@
                 <section class="page-header">
                     <h1><svg class="icon"><use href="/images/icons.svg#icon-route"></use></svg> Add Activity</h1>
                     <p class="empty-state">
-                        <%= trip.title %> &middot; must fall between
+                        <%= trip.tripName %> &middot; must fall between
                         <%= new Date(trip.startDate).toLocaleDateString() %> and <%= new Date(trip.endDate).toLocaleDateString() %>
                     </p>
                 </section>

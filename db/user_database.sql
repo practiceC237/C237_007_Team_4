@@ -77,6 +77,34 @@ CREATE TABLE IF NOT EXISTS trip_share (
   COLLATE utf8mb4_unicode_ci;
 
 -- -------------------------------------------------------------
+-- Itinerary Items
+-- Stores individual day-by-day activities for a trip.
+-- Owned by Shu Koon — Itinerary & Activity Management.
+-- -------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS itinerary_items (
+    itemId       INT AUTO_INCREMENT PRIMARY KEY,
+    tripId       INT NOT NULL,
+    title        VARCHAR(150) NOT NULL,
+    category     VARCHAR(30) NOT NULL DEFAULT 'Activity',
+    location     VARCHAR(200) NULL,
+    notes        VARCHAR(500) NULL,
+    activityDate DATE NOT NULL,
+    startTime    TIME NOT NULL,
+    endTime      TIME NOT NULL,
+    createdAt    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_itinerary_trip FOREIGN KEY (tripId) REFERENCES trips(tripId) ON DELETE CASCADE,
+    CONSTRAINT chk_itinerary_category CHECK (category IN
+        ('Activity', 'Food', 'Transport', 'Accommodation', 'Sightseeing', 'Other')),
+    CONSTRAINT chk_itinerary_time CHECK (endTime > startTime),
+
+    INDEX idx_itinerary_trip_date (tripId, activityDate, startTime)
+) ENGINE=InnoDB
+  DEFAULT CHARACTER SET utf8mb4
+  COLLATE utf8mb4_unicode_ci;
+
+
+-- -------------------------------------------------------------
 -- Packing Items Table
 -- Stores individual packing list items linked to a trip.
 -- -------------------------------------------------------------

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Itinerary : JourneySpark Travel Planner</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="app-body">
+    <%- include('partials/navbar') %>
+
+    <div class="app-shell">
+        <%- include('partials/sidebar', { area: 'traveler', active: '/itinerary' }) %>
+
+        <div class="app-main">
+            <main class="app-content">
+                <%- include('partials/alerts') %>
+
+                <section class="page-header">
+                    <h1><svg class="icon"><use href="/images/icons.svg#icon-route"></use></svg> Itinerary</h1>
+                </section>
+
+                <% if (trips.length === 0) { %>
+                    <section class="empty-panel">
+                        <svg class="icon empty-panel-icon"><use href="/images/icons.svg#icon-route"></use></svg>
+                        <h2>No trips yet</h2>
+                        <p class="empty-state">Add a trip first, then come back here to build its day-by-day itinerary.</p>
+                        <a href="/trips/new" class="btn btn-primary">Add a Trip</a>
+                    </section>
+                <% } else { %>
+                    <p class="empty-state">Pick a trip to view or plan its itinerary.</p>
+
+                    <div class="itinerary-trip-list">
+                        <% trips.forEach(function (trip) { %>
+                            <div class="itinerary-trip-card">
+                                <div>
+                                    <h3><%= trip.tripName %></h3>
+                                    <p class="itinerary-activity-meta">
+                                        <svg class="icon"><use href="/images/icons.svg#icon-pin"></use></svg> <%= trip.destination %>
+                                    </p>
+                                    <p class="empty-state">
+                                        <%= new Date(trip.startDate).toLocaleDateString() %> &ndash; <%= new Date(trip.endDate).toLocaleDateString() %>
+                                        &middot; <%= trip.status %>
+                                    </p>
+                                </div>
+                                <a class="btn btn-primary" href="/trips/<%= trip.tripId %>/itinerary">View Itinerary</a>
+                            </div>
+                        <% }); %>
+                    </div>
+                <% } %>
+            </main>
+        </div>
+    </div>
+    <script src="/js/auth.js"></script>
+</body>
+</html>

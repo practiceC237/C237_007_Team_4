@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
-<%- include('partials/apptopbar') %>
+<%- include('partials/navbar') %>
 <div class="app-shell">
      <%- include ('partials/sidebar',  { area: 'traveler', active:'/trips'}) %>
      <div class="app-main">
@@ -29,6 +29,10 @@
         <br>
 
         <a href="/trips/<%= trip.tripId %>/edit" class="btn btn-secondary">Edit Trip</a>
+
+        <br><br>
+
+        <a href="/trips/<%= trip.tripId %>/itinerary" class="btn btn-primary">View Itinerary</a>
 
         <br><br>
 
