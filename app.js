@@ -102,6 +102,10 @@ db.on('error', (err) => {
 // App Setup
 // ==================================================
 app.set('view engine', 'ejs');
+// Trust Render's reverse proxy so req.secure is detected correctly.
+// Without this, express-session silently refuses to set secure cookies
+// because it can't see past the proxy to confirm HTTPS.
+app.set('trust proxy', 1);
 app.use(express.urlencoded({ extended: false }));
 app.use(express.static('public'));
 
