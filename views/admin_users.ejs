@@ -22,22 +22,7 @@
                     <p>View every account, promote or demote roles, and remove accounts.</p>
                 </section>
 
-                <form action="/admin/users" method="GET" class="table-actions" style="margin-bottom: 18px;">
-                    <input type="text" name="q" class="form-control" placeholder="Search by name or email&hellip;"
-                           value="<%= search %>" style="max-width: 280px;">
-                    <button type="submit" class="btn btn-outline btn-sm">Search</button>
-                    <% if (search) { %>
-                        <a href="/admin/users" class="btn btn-outline btn-sm">Clear</a>
-                    <% } %>
-                </form>
-
-                <% if (users.length === 0 && search) { %>
-                    <section class="empty-panel">
-                        <svg class="icon empty-panel-icon"><use href="/images/icons.svg#icon-group"></use></svg>
-                        <h2>No matches for "<%= search %>"</h2>
-                        <p class="empty-state">Try a different name or email, or <a href="/admin/users">clear the search</a>.</p>
-                    </section>
-                <% } else if (users.length === 0) { %>
+                <% if (users.length === 0) { %>
                     <section class="empty-panel">
                         <svg class="icon empty-panel-icon"><use href="/images/icons.svg#icon-group"></use></svg>
                         <h2>No users yet</h2>
