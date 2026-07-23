@@ -35,6 +35,7 @@ const db = mysql.createConnection({
     database: "c237_007_team4_travelplanner",
     ssl: {
         rejectUnauthorized: true
+    }
 });
 
 db.connect((err) => {
