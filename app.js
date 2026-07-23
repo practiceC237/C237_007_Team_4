@@ -100,6 +100,7 @@ db.on('error', (err) => {
     console.error('MySQL connection error:', err.message);
 });
 
+
 // ==================================================
 // App Setup
 // ==================================================
@@ -1084,9 +1085,137 @@ app.post('/packing-list/:id/delete', checkAuthenticated, (req, res) => {
 // Admin routes
 // ==================================================
 app.get('/admin', checkAuthenticated, checkAdmin, (req, res) => {
-    res.render('admin', {
-        messages: req.flash('success'),
-        errors: req.flash('error')
+    // Three summary-card totals in one round trip: travelers, admins,
+    // and the destination catalog size.
+    const countsSql = `
+      SELECT
+        (SELECT COUNT(*) FROM users WHERE role = 'traveler') AS totalUsers,
+        (SELECT COUNT(*) FROM users WHERE role = 'admin')    AS totalAdmins,
+        (SELECT COUNT(DISTINCT destination) FROM trips
+         WHERE destination IS NOT NULL AND destination <> '') AS totalDestinations
+`;
+    db.query(countsSql, (err, results) => {
+        if (err) {
+            console.error(err);
+            req.flash('error', 'Could not load some dashboard totals.');
+        }
+        const counts = (results && results[0]) || { totalUsers: 0, totalAdmins: 0, totalDestinations: 0 };
+        res.render('admin', {
+            counts,
+            messages: req.flash('success'),
+            errors: req.flash('error')
+        });
+    });
+});
+
+// ---------- Manage users ----------
+app.get('/admin/users', checkAuthenticated, checkAdmin, (req, res) => {
+    const sql = 'SELECT userId, fullName, email, role, createdAt FROM users ORDER BY createdAt DESC';
+    db.query(sql, (err, users) => {
+        if (err) {
+            console.error(err);
+            req.flash('error', 'Could not load users.');
+            return res.redirect('/admin');
+        }
+        res.render('admin_users', {
+            users,
+            messages: req.flash('success'),
+            errors: req.flash('error')
+        });
+    });
+});
+
+// Promote a traveler to admin, or demote an admin back to traveler
+app.post('/admin/users/:id/role', checkAuthenticated, checkAdmin, (req, res) => {
+    const targetId = Number(req.params.id);
+    const newRole = req.body.role === 'admin' ? 'admin' : 'traveler';
+
+    if (targetId === req.session.user.userId) {
+        req.flash('error', 'You cannot change your own role.');
+        return res.redirect('/admin/users');
+    }
+
+    db.query('UPDATE users SET role = ? WHERE userId = ?', [newRole, targetId], (err) => {
+        if (err) {
+            console.error(err);
+            req.flash('error', "Could not update that user's role.");
+        } else {
+            req.flash('success', 'User role updated.');
+        }
+        res.redirect('/admin/users');
+    });
+});
+
+// Delete a user account
+app.post('/admin/users/:id/delete', checkAuthenticated, checkAdmin, (req, res) => {
+    const targetId = Number(req.params.id);
+
+    if (targetId === req.session.user.userId) {
+        req.flash('error', 'You cannot delete your own account.');
+        return res.redirect('/admin/users');
+    }
+
+    db.query('DELETE FROM users WHERE userId = ?', [targetId], (err) => {
+        if (err) {
+            console.error(err);
+            req.flash('error', 'Could not delete that user.');
+        } else {
+            req.flash('success', 'User deleted.');
+        }
+        res.redirect('/admin/users');
+    });
+});
+
+// ---------- Manage destinations ----------
+// Destinations aren't a catalog table — they're the free-text
+// `destination` field on each trip. "Managing" them here means
+// browsing the distinct values in use and, if needed, renaming one
+// (which bulk-updates every trip that uses it, e.g. to fix a typo
+// or merge "Bali" and "bali" into one spelling).
+app.get('/admin/destinations', checkAuthenticated, checkAdmin, (req, res) => {
+    const sql = `
+        SELECT destination, COUNT(*) AS tripCount
+        FROM trips
+        WHERE destination IS NOT NULL AND destination <> ''
+        GROUP BY destination
+        ORDER BY tripCount DESC, destination ASC
+    `;
+    db.query(sql, (err, destinations) => {
+        if (err) {
+            console.error(err);
+            req.flash('error', 'Could not load destinations.');
+            return res.redirect('/admin');
+        }
+        res.render('admin_destinations', {
+            destinations,
+            messages: req.flash('success'),
+            errors: req.flash('error')
+        });
+    });
+});
+
+// Rename a destination across every trip that uses it
+app.post('/admin/destinations/rename', checkAuthenticated, checkAdmin, (req, res) => {
+    const oldName = (req.body.oldName || '').trim();
+    const newName = (req.body.newName || '').trim();
+
+    if (!oldName || !newName) {
+        req.flash('error', 'Both the current and new destination name are required.');
+        return res.redirect('/admin/destinations');
+    }
+    if (oldName === newName) {
+        req.flash('error', 'That destination already has that name.');
+        return res.redirect('/admin/destinations');
+    }
+
+    db.query('UPDATE trips SET destination = ? WHERE destination = ?', [newName, oldName], (err, result) => {
+        if (err) {
+            console.error(err);
+            req.flash('error', 'Could not rename that destination.');
+        } else {
+            req.flash('success', `Renamed "${oldName}" to "${newName}" on ${result.affectedRows} trip(s).`);
+        }
+        res.redirect('/admin/destinations');
     });
 });
 
