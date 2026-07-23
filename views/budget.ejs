@@ -10,7 +10,7 @@
         .budget-container { max-width: 1000px; margin: 2rem auto; padding: 0 1rem; font-family: sans-serif; }
         .alert { padding: 1rem; border-radius: 4px; margin-bottom: 1rem; }
         .alert-success { background: #d4edda; color: #155724; }
-        .alert-danger { background: #f8d7da; color: #721c24; }
+        .alert-danger { background: #f8d7da; color: #721c24; font-weight: bold; }
         
         /* Warning Status Banners */
         .status-normal { background: #e2f0d9; color: #385723; padding: 1rem; border-radius: 6px; border-left: 6px solid #385723; }
@@ -117,7 +117,7 @@
             if (percentage >= 100) {
                 statusClass = 'status-over';
                 barClass = 'bg-over';
-                statusText = 'OVER BUDGET — Total expenses have exceeded the trip budget!';
+                statusText = 'FULL / OVER BUDGET — Expenses have reached or exceeded the trip budget!';
             } else if (percentage >= 80) {
                 statusClass = 'status-warning';
                 barClass = 'bg-warning';
@@ -132,7 +132,7 @@
                 <input type="hidden" name="tripId" value="<%= currentTripId %>">
                 <div class="form-group" style="margin: 0; flex-grow: 1;">
                     <label for="totalBudget">Set Total Trip Budget ($):</label>
-                    <input type="number" step="0.01" min="0.01" id="totalBudget" name="totalBudget" value="<%= tripBudget.toFixed(2) %>" required>
+                    <input type="number" step="0.01" min="1" id="totalBudget" name="totalBudget" value="<%= tripBudget.toFixed(2) %>" required>
                 </div>
                 <button type="submit" class="btn">Update Budget</button>
             </form>
@@ -159,7 +159,7 @@
             <!-- Form: Add or Edit Expense -->
             <div class="card">
                 <h2><%= isEditing ? 'Edit Expense' : 'Add New Expense' %></h2>
-                <form action="<%= isEditing ? '/budget/update/' + activeId + '#expense-history' : '/budget/add#expense-history' %>" method="POST">
+                <form id="expenseForm" action="<%= isEditing ? '/budget/update/' + activeId + '#expense-history' : '/budget/add#expense-history' %>" method="POST">
                     <input type="hidden" name="tripId" value="<%= currentTripId %>">
 
                     <div class="form-group">
@@ -169,7 +169,7 @@
 
                     <div class="form-group">
                         <label for="amount">Amount ($):</label>
-                        <input type="number" step="0.01" min="0.01" id="amount" name="amount" value="<%= editAmt %>" placeholder="Must be greater than 0" required>
+                        <input type="number" step="0.01" min="1" id="amount" name="amount" value="<%= editAmt %>" placeholder="Must be at least $1" required>
                     </div>
 
                     <div class="form-group">
@@ -259,6 +259,37 @@
             <% } %>
         </div>
     </div>
+
+    <!-- Client JavaScript for Budget Overflow Checks -->
+    <script>
+        const isEditing = <%= isEditing %>;
+        const currentSpent = <%= spent %>;
+        const tripBudget = <%= tripBudget %>;
+        const editAmt = <%= editAmt ? editAmt : 0 %>;
+
+        document.getElementById('expenseForm').addEventListener('submit', function(e) {
+            const enteredAmt = parseFloat(document.getElementById('amount').value) || 0;
+            let projectedSpent = currentSpent + enteredAmt;
+
+            // Subtract previous amount if editing existing expense
+            if (isEditing) {
+                projectedSpent -= editAmt;
+            }
+
+            if (!isEditing && currentSpent >= tripBudget) {
+                e.preventDefault();
+                alert('🚫 Cannot Add Expense: Your budget of $' + tripBudget.toFixed(2) + ' is already FULL!');
+                return false;
+            }
+
+            if (projectedSpent > tripBudget) {
+                e.preventDefault();
+                const remainingAmt = Math.max(0, tripBudget - (isEditing ? (currentSpent - editAmt) : currentSpent));
+                alert('🚫 Budget Exceeded: This expense ($' + enteredAmt.toFixed(2) + ') exceeds your total budget ($' + tripBudget.toFixed(2) + '). Maximum allowed is $' + remainingAmt.toFixed(2) + '.');
+                return false;
+            }
+        });
+    </script>
 
 </body>
 </html>

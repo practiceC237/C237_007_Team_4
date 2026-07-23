@@ -398,49 +398,74 @@ app.get('/budget', checkAuthenticated, (req, res) => {
 app.post('/budget/set-trip-budget', checkAuthenticated, (req, res) => {
     const { totalBudget } = req.body;
     const userId = req.session.user.userId;
+    const parsedBudget = Number(totalBudget);
 
-    if (totalBudget && Number(totalBudget) > 0) {
-        const newBudget = Number(totalBudget);
-        const sql = 'UPDATE users SET totalBudget = ? WHERE userId = ?';
-        
-        db.query(sql, [newBudget, userId], (err) => {
-            if (err) {
-                console.error('MySQL Update Budget Error:', err);
-                req.flash('error', 'Failed to update trip budget in database.');
-            } else {
-                req.session.tripBudget = newBudget;
-                req.flash('success', 'Total trip budget updated successfully!');
-            }
-            res.redirect('/budget');
-        });
-    } else {
-        req.flash('error', 'Please enter a valid budget amount greater than 0.');
-        res.redirect('/budget');
+    if (!totalBudget || isNaN(parsedBudget) || parsedBudget < 1) {
+        req.flash('error', 'Please enter a valid trip budget of at least $1.00.');
+        return res.redirect('/budget');
     }
+
+    const sql = 'UPDATE users SET totalBudget = ? WHERE userId = ?';
+    db.query(sql, [parsedBudget, userId], (err) => {
+        if (err) {
+            console.error('MySQL Update Budget Error:', err);
+            req.flash('error', 'Failed to update trip budget in database.');
+        } else {
+            req.session.tripBudget = parsedBudget;
+            req.flash('success', 'Total trip budget updated successfully!');
+        }
+        res.redirect('/budget');
+    });
 });
 
 // POST /budget/add
 app.post(['/budget', '/budget/add'], checkAuthenticated, (req, res) => {
     const { description, amount, category, expenseDate } = req.body;
     const userId = req.session.user.userId;
+    const parsedAmount = Number(amount);
 
-    if (!description || !amount) {
-        req.flash('error', 'Please provide both description and amount.');
+    if (!description || !amount || isNaN(parsedAmount) || parsedAmount < 1) {
+        req.flash('error', 'Please provide a valid description and an amount of at least $1.00.');
         return res.redirect('/budget#expense-history');
     }
 
-    const sql = 'INSERT INTO budget (userId, description, amount, category, expenseDate) VALUES (?, ?, ?, ?, ?)';
-    const selectedCategory = category ? category.trim() : 'Other';
-    const selectedDate = expenseDate || new Date();
+    // Check budget limit BEFORE adding expense
+    const checkSql = 'SELECT totalBudget FROM users WHERE userId = ?';
+    db.query(checkSql, [userId], (userErr, userResults) => {
+        const tripBudget = (!userErr && userResults.length > 0) ? Number(userResults[0].totalBudget) : (req.session.tripBudget || 1000.00);
 
-    db.query(sql, [userId, description, Number(amount), selectedCategory, selectedDate], (err) => {
-        if (err) {
-            console.error('MySQL Insert Error:', err);
-            req.flash('error', 'Failed to add budget item.');
-            return res.redirect('/budget#expense-history');
-        }
-        req.flash('success', 'Budget item added successfully!');
-        res.redirect('/budget#expense-history');
+        const spentSql = 'SELECT SUM(amount) AS totalSpent FROM budget WHERE userId = ?';
+        db.query(spentSql, [userId], (spentErr, spentResult) => {
+            const currentSpent = (spentResult && spentResult[0].totalSpent) ? Number(spentResult[0].totalSpent) : 0;
+            const projectedSpent = currentSpent + parsedAmount;
+
+            // Block adding if user is already at max budget or this expense pushes them over
+            if (currentSpent >= tripBudget) {
+                req.flash('error', `🚫 Cannot Add Expense: Your budget of $${tripBudget.toFixed(2)} is already FULL!`);
+                return res.redirect('/budget#expense-history');
+            }
+
+            if (projectedSpent > tripBudget) {
+                const maxAllowed = tripBudget - currentSpent;
+                req.flash('error', `🚫 Budget Exceeded: This $${parsedAmount.toFixed(2)} expense exceeds your budget limit ($${tripBudget.toFixed(2)}). You only have $${maxAllowed.toFixed(2)} remaining.`);
+                return res.redirect('/budget#expense-history');
+            }
+
+            // Proceed with inserting expense
+            const sql = 'INSERT INTO budget (userId, description, amount, category, expenseDate) VALUES (?, ?, ?, ?, ?)';
+            const selectedCategory = category ? category.trim() : 'Other';
+            const selectedDate = expenseDate || new Date();
+
+            db.query(sql, [userId, description.trim(), parsedAmount, selectedCategory, selectedDate], (err) => {
+                if (err) {
+                    console.error('MySQL Insert Error:', err);
+                    req.flash('error', 'Failed to add budget item.');
+                    return res.redirect('/budget#expense-history');
+                }
+                req.flash('success', 'Budget item added successfully!');
+                res.redirect('/budget#expense-history');
+            });
+        });
     });
 });
 
@@ -449,33 +474,53 @@ app.post('/budget/update/:id', checkAuthenticated, (req, res) => {
     const editId = req.params.id;
     const userId = req.session.user.userId;
     const { description, amount, category, expenseDate } = req.body;
+    const parsedAmount = Number(amount);
 
-    if (!description || !amount) {
-        req.flash('error', 'Please provide both description and amount.');
+    if (!description || !amount || isNaN(parsedAmount) || parsedAmount < 1) {
+        req.flash('error', 'Please provide a valid description and an amount of at least $1.00.');
         return res.redirect('/budget#expense-history');
     }
 
-    const selectedCategory = category ? category.trim() : 'Other';
-    const selectedDate = expenseDate ? new Date(expenseDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+    // Check budget limit BEFORE updating expense
+    const checkSql = 'SELECT totalBudget FROM users WHERE userId = ?';
+    db.query(checkSql, [userId], (userErr, userResults) => {
+        const tripBudget = (!userErr && userResults.length > 0) ? Number(userResults[0].totalBudget) : (req.session.tripBudget || 1000.00);
 
-    const sqlExpenseId = 'UPDATE budget SET description = ?, amount = ?, category = ?, expenseDate = ? WHERE expenseId = ? AND userId = ?';
-    db.query(sqlExpenseId, [description, Number(amount), selectedCategory, selectedDate, editId, userId], (err, result) => {
-        if (err || (result && result.affectedRows === 0)) {
-            const sqlBudgetId = 'UPDATE budget SET description = ?, amount = ?, category = ?, expenseDate = ? WHERE budgetid = ? AND userId = ?';
-            db.query(sqlBudgetId, [description, Number(amount), selectedCategory, selectedDate, editId, userId], (err2) => {
-                if (err2) {
-                    console.error('MySQL Update Error:', err2);
-                    req.flash('error', 'Failed to update expense item.');
-                    return res.redirect('/budget#expense-history');
+        // Exclude current item being edited from total calculation
+        const spentSql = 'SELECT SUM(amount) AS otherSpent FROM budget WHERE userId = ? AND expenseId != ? AND budgetid != ?';
+        db.query(spentSql, [userId, editId, editId], (spentErr, spentResult) => {
+            const otherSpent = (spentResult && spentResult[0].otherSpent) ? Number(spentResult[0].otherSpent) : 0;
+            const projectedSpent = otherSpent + parsedAmount;
+
+            if (projectedSpent > tripBudget) {
+                const maxAllowed = tripBudget - otherSpent;
+                req.flash('error', `🚫 Budget Exceeded: Updating to $${parsedAmount.toFixed(2)} exceeds your budget limit ($${tripBudget.toFixed(2)}). Max allowed is $${maxAllowed.toFixed(2)}.`);
+                return res.redirect('/budget#expense-history');
+            }
+
+            const selectedCategory = category ? category.trim() : 'Other';
+            const selectedDate = expenseDate ? new Date(expenseDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+
+            const sqlExpenseId = 'UPDATE budget SET description = ?, amount = ?, category = ?, expenseDate = ? WHERE expenseId = ? AND userId = ?';
+            db.query(sqlExpenseId, [description.trim(), parsedAmount, selectedCategory, selectedDate, editId, userId], (err, result) => {
+                if (err || (result && result.affectedRows === 0)) {
+                    const sqlBudgetId = 'UPDATE budget SET description = ?, amount = ?, category = ?, expenseDate = ? WHERE budgetid = ? AND userId = ?';
+                    db.query(sqlBudgetId, [description.trim(), parsedAmount, selectedCategory, selectedDate, editId, userId], (err2) => {
+                        if (err2) {
+                            console.error('MySQL Update Error:', err2);
+                            req.flash('error', 'Failed to update expense item.');
+                            return res.redirect('/budget#expense-history');
+                        }
+                        req.flash('success', 'Expense updated successfully!');
+                        res.redirect('/budget#expense-history');
+                    });
+                    return;
                 }
+
                 req.flash('success', 'Expense updated successfully!');
                 res.redirect('/budget#expense-history');
             });
-            return;
-        }
-
-        req.flash('success', 'Expense updated successfully!');
-        res.redirect('/budget#expense-history');
+        });
     });
 });
 
