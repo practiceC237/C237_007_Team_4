@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Budget & Expense Management - JourneySpark</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        html { scroll-behavior: smooth; }
+        .budget-container { max-width: 1000px; margin: 2rem auto; padding: 0 1rem; font-family: sans-serif; }
+        .alert { padding: 1rem; border-radius: 4px; margin-bottom: 1rem; }
+        .alert-success { background: #d4edda; color: #155724; }
+        .alert-danger { background: #f8d7da; color: #721c24; }
+        
+        /* Warning Status Banners */
+        .status-normal { background: #e2f0d9; color: #385723; padding: 1rem; border-radius: 6px; border-left: 6px solid #385723; }
+        .status-warning { background: #fff2cc; color: #b25900; padding: 1rem; border-radius: 6px; border-left: 6px solid #b25900; }
+        .status-over { background: #fce4d6; color: #c65911; padding: 1rem; border-radius: 6px; border-left: 6px solid #c65911; }
+
+        .progress-bar-bg { background: #e0e0e0; border-radius: 8px; height: 20px; overflow: hidden; margin: 0.5rem 0; }
+        .progress-bar-fill { height: 100%; transition: width 0.3s ease; }
+        .bg-normal { background: #28a745; }
+        .bg-warning { background: #ffc107; }
+        .bg-over { background: #dc3545; }
+
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1.5rem; }
+        .card { background: #fff; padding: 1.5rem; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .form-group { margin-bottom: 1rem; }
+        .form-group label { display: block; margin-bottom: 0.3rem; font-weight: bold; }
+        .form-group input, .form-group select { width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        .btn { padding: 0.5rem 1rem; border: none; border-radius: 4px; cursor: pointer; color: white; background: #007bff; text-decoration: none; display: inline-block; }
+        .btn-danger { background: #dc3545; }
+        .btn-sm { padding: 0.25rem 0.5rem; font-size: 0.85rem; }
+        
+        /* Fixed Floating Back Button */
+        .btn-floating-back { position: fixed; top: 80px; left: 20px; z-index: 1000; box-shadow: 0 2px 6px rgba(0,0,0,0.2); }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+        th, td { padding: 0.75rem; border-bottom: 1px solid #ddd; text-align: left; }
+        th { background: #f8f9fa; }
+        .actions-cell { display: flex; gap: 0.5rem; }
+    </style>
+</head>
+<body>
+    <%- include('partials/navbar') %>
+    <a href="/" class="btn btn-outline btn-floating-back">&larr; Back</a>
+    <div class="budget-container">
+        <h1>Budget & Expense Management</h1>
+
+        <p>
+            <% if (typeof trip !== 'undefined' && trip && trip.destination) { %>
+                Trip: <strong><%= trip.destination %></strong> 
+                (<%= new Date(trip.startDate).toLocaleDateString() %> - <%= new Date(trip.endDate).toLocaleDateString() %>)
+            <% } else { %>
+                <strong>My Travel Expenses</strong>
+            <% } %>
+        </p>
+
+        <!-- Flash Messages -->
+        <% if (typeof messages !== 'undefined' && messages && messages.length > 0) { %>
+            <% messages.forEach(msg => { %>
+                <div class="alert alert-success"><%= msg %></div>
+            <% }) %>
+        <% } %>
+        <% if (typeof errors !== 'undefined' && errors && errors.length > 0) { %>
+            <% errors.forEach(err => { %>
+                <div class="alert alert-danger"><%= err %></div>
+            <% }) %>
+        <% } %>
+
+        <% 
+            const currentTripId = (typeof trip !== 'undefined' && trip) ? (trip.tripId || 0) : 0;
+            const tripBudget = (typeof trip !== 'undefined' && trip && trip.totalBudget) ? Number(trip.totalBudget) : 1000.00;
+            const spent = (typeof totalSpent !== 'undefined') ? Number(totalSpent) : 0.00;
+            const remaining = (typeof remainingBudget !== 'undefined') ? Number(remainingBudget) : (tripBudget - spent);
+            const isEditing = (typeof editingExpense !== 'undefined' && editingExpense !== null);
+            const expenseItems = (typeof expenses !== 'undefined' && expenses) ? expenses : [];
+            const rawCategoriesData = (typeof categoryBreakdown !== 'undefined' && categoryBreakdown) ? categoryBreakdown : [];
+
+            // Case-insensitive extraction for edit mode
+            const editDesc = isEditing ? (editingExpense.description || editingExpense.Description || '') : '';
+            const editAmt = isEditing ? (editingExpense.amount || editingExpense.Amount || '') : '';
+            const editCat = isEditing ? (editingExpense.category || editingExpense.Category || '') : '';
+            const rawDate = isEditing ? (editingExpense.expenseDate || editingExpense['Expense Date'] || editingExpense.expensedate) : null;
+            let editDateFormatted = '';
+            if (rawDate) {
+                const d = new Date(rawDate);
+                if (!isNaN(d.getTime())) {
+                    editDateFormatted = d.toISOString().split('T')[0];
+                }
+            }
+            const activeId = isEditing ? (editingExpense.expenseId || editingExpense.budgetid || editingExpense.id) : '';
+
+            // Master category list
+            const categoryList = ['Transport', 'Accommodation', 'Food & Dining', 'Activities', 'Shopping', 'Other'];
+
+            // Map categories so ALL 6 categories are listed
+            const fullCategoryBreakdown = categoryList.map(catName => {
+                const found = rawCategoriesData.find(c => String(c.category || c.Category).trim() === String(catName).trim());
+                return {
+                    category: catName,
+                    total: found ? Number(found.total || found.Total || 0) : 0.00
+                };
+            });
+
+            // Warning Level Logic
+            const percentage = tripBudget > 0 ? (spent / tripBudget) * 100 : 0;
+            let statusClass = 'status-normal';
+            let barClass = 'bg-normal';
+            let statusText = 'Normal — Spending is well within budget limits.';
+
+            if (percentage >= 100) {
+                statusClass = 'status-over';
+                barClass = 'bg-over';
+                statusText = 'OVER BUDGET — Total expenses have exceeded the trip budget!';
+            } else if (percentage >= 80) {
+                statusClass = 'status-warning';
+                barClass = 'bg-warning';
+                statusText = 'WARNING — You have used over 80% of your budget!';
+            }
+        %>
+
+        <!-- Trip Budget Overview & Warning Levels -->
+        <div class="card">
+            <h2>Budget Summary</h2>
+            <form action="/budget/set-trip-budget" method="POST" style="margin-bottom: 1rem; display: flex; gap: 1rem; align-items: flex-end;">
+                <input type="hidden" name="tripId" value="<%= currentTripId %>">
+                <div class="form-group" style="margin: 0; flex-grow: 1;">
+                    <label for="totalBudget">Set Total Trip Budget ($):</label>
+                    <input type="number" step="0.01" min="0.01" id="totalBudget" name="totalBudget" value="<%= tripBudget.toFixed(2) %>" required>
+                </div>
+                <button type="submit" class="btn">Update Budget</button>
+            </form>
+
+            <hr>
+
+            <div class="<%= statusClass %>">
+                <strong>Status:</strong> <%= statusText %>
+            </div>
+
+            <div class="progress-bar-bg">
+                <div class="progress-bar-fill <%= barClass %>" style="width: <%= Math.min(percentage, 100) %>%;"></div>
+            </div>
+
+            <p style="margin: 0.5rem 0 0 0; font-size: 0.95rem;">
+                <strong>Total Budget:</strong> $<%= tripBudget.toFixed(2) %> | 
+                <strong>Total Spent:</strong> $<%= spent.toFixed(2) %> | 
+                <strong>Remaining:</strong> $<%= remaining.toFixed(2) %> | 
+                <strong>Used:</strong> <%= percentage.toFixed(1) %>%
+            </p>
+        </div>
+
+        <div class="grid-2">
+            <!-- Form: Add or Edit Expense -->
+            <div class="card">
+                <h2><%= isEditing ? 'Edit Expense' : 'Add New Expense' %></h2>
+                <form action="<%= isEditing ? '/budget/update/' + activeId + '#expense-history' : '/budget/add#expense-history' %>" method="POST">
+                    <input type="hidden" name="tripId" value="<%= currentTripId %>">
+
+                    <div class="form-group">
+                        <label for="description">Description:</label>
+                        <input type="text" id="description" name="description" value="<%= editDesc %>" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="amount">Amount ($):</label>
+                        <input type="number" step="0.01" min="0.01" id="amount" name="amount" value="<%= editAmt %>" placeholder="Must be greater than 0" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="category">Category:</label>
+                        <select id="category" name="category" required>
+                            <% categoryList.forEach(cat => { %>
+                                <option value="<%= cat %>" <%= (isEditing && editCat === cat) ? 'selected' : '' %>><%= cat %></option>
+                            <% }) %>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="expenseDate">Expense Date:</label>
+                        <input type="date" id="expenseDate" name="expenseDate" value="<%= editDateFormatted %>" required>
+                    </div>
+
+                    <button type="submit" class="btn"><%= isEditing ? 'Save Changes' : 'Add Expense' %></button>
+                    <% if (isEditing) { %>
+                        <a href="/budget#expense-history" style="margin-left: 0.5rem; text-decoration: underline;">Cancel Edit</a>
+                    <% } %>
+                </form>
+            </div>
+
+            <!-- Category Breakdown -->
+            <div class="card">
+                <h2>Category Breakdown</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Category</th>
+                            <th>Spent ($)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% fullCategoryBreakdown.forEach(cat => { %>
+                            <tr>
+                                <td><%= cat.category %></td>
+                                <td>$<%= cat.total.toFixed(2) %></td>
+                            </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Expense History Table -->
+        <div class="card" id="expense-history" style="margin-top: 1.5rem;">
+            <h2>Expense History</h2>
+            <% if (expenseItems && expenseItems.length > 0) { %>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Description</th>
+                            <th>Category</th>
+                            <th>Amount ($)</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% expenseItems.forEach(item => { %>
+                            <% 
+                                const itemId = item.expenseId || item.budgetid || item.id;
+                                const itemDesc = item.description || item.Description;
+                                const itemCat = item.category || item.Category || 'General';
+                                const itemAmt = item.amount || item.Amount;
+                                const itemDate = item.expenseDate || item['Expense Date'] || item.expensedate;
+                            %>
+                            <tr>
+                                <td><%= itemDate ? new Date(itemDate).toLocaleDateString() : 'N/A' %></td>
+                                <td><%= itemDesc %></td>
+                                <td><%= itemCat %></td>
+                                <td>$<%= Number(itemAmt).toFixed(2) %></td>
+                                <td class="actions-cell">
+                                    <a href="/budget?editId=<%= itemId %>#expense-history" class="btn btn-sm">Edit</a>
+                                    <form action="/budget/delete/<%= itemId %>#expense-history" method="POST" onsubmit="return confirm('Delete this expense?');" style="margin: 0;">
+                                        <input type="hidden" name="tripId" value="<%= currentTripId %>">
+                                        <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+            <% } else { %>
+                <p style="color: #666; font-style: italic;">No expenses recorded yet.</p>
+            <% } %>
+        </div>
+    </div>
+
+</body>
+</html>

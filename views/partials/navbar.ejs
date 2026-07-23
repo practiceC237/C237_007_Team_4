@@ -1,23 +1,173 @@
-<header class="navbar">
-    <a class="brand" href="/">
-        <span class="brand-mark"><svg class="icon"><use href="/images/icons.svg#icon-plane"></use></svg></span>
-        <span class="brand-name">JourneySpark Travel Planner</span>
-    </a>
-    <button type="button" class="nav-toggle" aria-label="Toggle navigation">
-        <svg class="icon"><use href="/images/icons.svg#icon-menu"></use></svg>
-    </button>
-    <nav class="nav-links">
-        <a href="/">Home</a>
-        <a href="/#destinations">Destinations</a>
-        <a href="/#how-it-works">How It Works</a>
-        <% if (user) { %>
-            <a class="btn btn-outline" href="<%= user.role === 'admin' ? '/admin' : '/dashboard' %>">My Dashboard</a>
-            <form action="/logout" method="POST" class="nav-logout-form">
-                <button type="submit" class="btn btn-primary">Log Out</button>
-            </form>
-        <% } else { %>
+<style>
+    /* Force brand name, plane icon, and text navigation links */
+    .brand,
+    .brand-name,
+    .brand-mark,
+    .brand-mark svg,
+    .brand-mark use,
+    .nav-links a:not(.btn) {
+        color: #000000 !important;
+        fill: #000000 !important;
+    }
+
+    /* Hover color for standard text links in the navbar */
+    .nav-links a:not(.btn):hover {
+        color: #6b5ce7 !important;
+        opacity: 0.9;
+    }
+
+    /* Style for Admin Dashboard button */
+    .btn-admin-dash {
+        color: #ffffff !important;
+        border: 1px solid rgba(173, 221, 253, 0.6) !important;
+        background-color: rgba(130, 117, 243, 0.9) !important;
+        padding: 0.4rem 0.85rem;
+        border-radius: 6px;
+        text-decoration: none;
+        font-weight: 600;
+        transition: all 0.2s ease;
+    }
+
+    /* Soft Purple Hover: Text stays clearly visible with high contrast */
+    .btn-admin-dash:hover {
+        background-color: rgba(130, 117, 243, 0.25) !important;
+        color: #5b4bc4 !important;
+        border-color: #8275f3 !important;
+    }
+
+    /* Layout alignment */
+    .navbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem 1.5rem;
+    }
+
+    .nav-links {
+        display: flex;
+        align-items: center;
+        gap: 1.25rem;
+    }
+
+    .topbar-user {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+    }
+
+    /* User Avatar Initial Circle */
+    .topbar-user .avatar {
+        width: 36px;
+        height: 36px;
+        background-color: #8275f3;
+        color: #ffffff !important;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 0.95rem;
+    }
+
+    /* Role Badges Styled to Purple */
+    .role-badge,
+    .role-badge.role-admin,
+    .role-badge.role-traveler {
+        background-color: rgba(130, 117, 243, 0.18) !important;
+        color: #6b5ce7 !important;
+        border: 1px solid rgba(130, 117, 243, 0.4) !important;
+        padding: 0.15rem 0.5rem;
+        border-radius: 12px;
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        display: inline-block;
+    }
+</style>
+
+<% if (user) { %>
+    <% if (user.role === 'admin') { %>
+        <!-- ================================================== -->
+        <!-- Admin Navigation Bar                               -->
+        <!-- ================================================== -->
+        <header class="navbar navbar-admin">
+            <button type="button" class="nav-toggle sidebar-toggle" aria-label="Toggle sidebar">
+                <svg class="icon"><use href="/images/icons.svg#icon-menu"></use></svg>
+            </button>
+            <a class="brand" href="/">
+                <span class="brand-mark"><svg class="icon"><use href="/images/icons.svg#icon-plane"></use></svg></span>
+                <span class="brand-name">JourneySpark Travel Planner</span>
+            </a>
+            
+            <nav class="nav-links">
+                <a href="/">Home</a>
+                <a href="/admin" class="btn-admin-dash">Admin Dashboard</a>
+                
+                <div class="topbar-user">
+                    <span class="avatar avatar-admin"><%= user.fullName ? user.fullName.charAt(0).toUpperCase() : 'A' %></span>
+                    <div class="topbar-user-meta">
+                        <span class="topbar-name" style="color: #8275f3e6; font-weight: 600;"><%= user.fullName %></span>
+                        <span class="role-badge role-admin">Admin</span>
+                    </div>
+                </div>
+
+                <form action="/logout" method="POST" class="nav-logout-form">
+                    <button type="submit" class="btn btn-primary">Log Out</button>
+                </form>
+            </nav>
+        </header>
+
+    <% } else { %>
+        <!-- ================================================== -->
+        <!-- Logged-in Traveler Navigation Bar                  -->
+        <!-- ================================================== -->
+        <header class="navbar navbar-user">
+            <a class="brand" href="/">
+                <span class="brand-mark"><svg class="icon"><use href="/images/icons.svg#icon-plane"></use></svg></span>
+                <span class="brand-name">JourneySpark Travel Planner</span>
+            </a>
+            
+            <button type="button" class="nav-toggle" aria-label="Toggle navigation">
+                <svg class="icon"><use href="/images/icons.svg#icon-menu"></use></svg>
+            </button>
+
+            <nav class="nav-links">
+                <a href="/">Home</a>
+                <a href="/budget">My Budget</a>
+
+                <div class="topbar-user">
+                    <span class="avatar"><%= user.fullName ? user.fullName.charAt(0).toUpperCase() : 'U' %></span>
+                    <div class="topbar-user-meta">
+                        <span class="topbar-name" style="color: #8275f3e6; font-weight: 600;"><%= user.fullName %></span>
+                        <span class="role-badge role-traveler">Traveler</span>
+                    </div>
+                </div>
+
+                <form action="/logout" method="POST" class="nav-logout-form">
+                    <button type="submit" class="btn btn-primary">Log Out</button>
+                </form>
+            </nav>
+        </header>
+    <% } %>
+
+<% } else { %>
+    <!-- ================================================== -->
+    <!-- Guest / Public Visitor Navigation Bar              -->
+    <!-- ================================================== -->
+    <header class="navbar navbar-guest">
+        <a class="brand" href="/">
+            <span class="brand-mark"><svg class="icon"><use href="/images/icons.svg#icon-plane"></use></svg></span>
+            <span class="brand-name">JourneySpark Travel Planner</span>
+        </a>
+        <button type="button" class="nav-toggle" aria-label="Toggle navigation">
+            <svg class="icon"><use href="/images/icons.svg#icon-menu"></use></svg>
+        </button>
+        <nav class="nav-links">
+            <a href="/">Home</a>
+            <a href="/#destinations">Destinations</a>
             <a class="btn btn-outline" href="/login">Login</a>
             <a class="btn btn-primary" href="/register">Register</a>
-        <% } %>
-    </nav>
-</header>
+        </nav>
+    </header>
+<% } %>

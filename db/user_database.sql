@@ -10,9 +10,9 @@ CREATE DATABASE IF NOT EXISTS c237_007_team4_travelplanner
 USE c237_007_team4_travelplanner;
 
 -- -------------------------------------------------------------
--- Users Table
--- Public registration creates a traveler account.
--- Admin accounts are created separately using create-admin.js.
+-- Users
+-- Website only can registration a traveler account.
+-- Admin accounts are created using mysql database.
 -- Passwords are stored only as bcrypt hashes.
 -- -------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS users (

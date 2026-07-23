@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Itinerary : <%= trip.title %> : JourneySpark Travel Planner</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="app-body">
+    <%- include('partials/apptopbar') %>
+
+    <div class="app-shell">
+        <%- include('partials/sidebar', { area: 'traveler', active: '/dashboard' }) %>
+
+        <div class="app-main">
+            <main class="app-content">
+                <%- include('partials/alerts') %>
+
+                <section class="page-header itinerary-page-header">
+                    <div>
+                        <h1><svg class="icon"><use href="/images/icons.svg#icon-route"></use></svg> <%= trip.title %></h1>
+                        <p class="empty-state">
+                            <%= trip.destination %> &middot;
+                            <%= new Date(trip.startDate).toLocaleDateString() %> &ndash; <%= new Date(trip.endDate).toLocaleDateString() %>
+                        </p>
+                    </div>
+                    <a class="btn btn-primary" href="/trips/<%= trip.tripId %>/itinerary/add">
+                        <svg class="icon"><use href="/images/icons.svg#icon-route"></use></svg> Add Activity
+                    </a>
+                </section>
+
+                <% days.forEach(function (day) { %>
+                    <section class="itinerary-day">
+                        <div class="itinerary-day-header">
+                            <h2>Day <%= day.dayNumber %></h2>
+                            <span class="itinerary-day-date"><%= new Date(day.date + 'T00:00:00').toDateString() %></span>
+                        </div>
+
+                        <% if (day.activities.length === 0) { %>
+                            <div class="empty-panel itinerary-empty-day">
+                                <p class="empty-state">No activities planned for this day yet.</p>
+                            </div>
+                        <% } else { %>
+                            <div class="itinerary-activity-list">
+                                <% day.activities.forEach(function (item) { %>
+                                    <div class="itinerary-activity-card">
+                                        <div class="itinerary-activity-time">
+                                            <%= item.startTime.slice(0,5) %> &ndash; <%= item.endTime.slice(0,5) %>
+                                        </div>
+                                        <div class="itinerary-activity-body">
+                                            <div class="itinerary-activity-title-row">
+                                                <h3><%= item.title %></h3>
+                                                <span class="category-badge category-<%= item.category.toLowerCase() %>"><%= item.category %></span>
+                                            </div>
+                                            <% if (item.location) { %>
+                                                <p class="itinerary-activity-meta">
+                                                    <svg class="icon"><use href="/images/icons.svg#icon-pin"></use></svg> <%= item.location %>
+                                                </p>
+                                            <% } %>
+                                            <% if (item.notes) { %>
+                                                <p class="itinerary-activity-notes"><%= item.notes %></p>
+                                            <% } %>
+                                        </div>
+                                        <div class="itinerary-activity-actions">
+                                            <a class="btn btn-outline" href="/trips/<%= trip.tripId %>/itinerary/<%= item.itemId %>/edit">Edit</a>
+                                            <form action="/trips/<%= trip.tripId %>/itinerary/<%= item.itemId %>/delete" method="POST"
+                                                  onsubmit="return confirm('Delete this activity?');">
+                                                <button type="submit" class="btn btn-outline itinerary-delete-btn">Delete</button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                <% }); %>
+                            </div>
+                        <% } %>
+                    </section>
+                <% }); %>
+            </main>
+        </div>
+    </div>
+    <script src="/js/auth.js"></script>
+</body>
+</html>
