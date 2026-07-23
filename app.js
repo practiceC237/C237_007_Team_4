@@ -1089,8 +1089,20 @@ app.get('/admin', checkAuthenticated, checkAdmin, (req, res) => {
 
 // ---------- Manage users ----------
 app.get('/admin/users', checkAuthenticated, checkAdmin, (req, res) => {
-    const sql = 'SELECT userId, fullName, email, role, createdAt FROM users ORDER BY createdAt DESC';
-    db.query(sql, (err, users) => {
+  const search = (req.query.q || '').trim();
+
+    let sql = 'SELECT userId, fullName, email, role, createdAt FROM users';
+    const params = [];
+
+    if (search) {
+        sql += ' WHERE fullName LIKE ? OR email LIKE ?';
+        const like = `%${search}%`;
+        params.push(like, like);
+    }
+
+    sql += ' ORDER BY createdAt DESC';
+
+    db.query(sql, params, (err, users) => {
         if (err) {
             console.error(err);
             req.flash('error', 'Could not load users.');
@@ -1098,6 +1110,7 @@ app.get('/admin/users', checkAuthenticated, checkAdmin, (req, res) => {
         }
         res.render('admin_users', {
             users,
+            search,
             messages: req.flash('success'),
             errors: req.flash('error')
         });
