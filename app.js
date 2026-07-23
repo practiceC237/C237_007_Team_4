@@ -463,67 +463,12 @@ app.post('/trips/:id/edit',checkAuthenticated,(req,res)=>{
 // undefined 'tripId' variable). Removed since '/trips/:id/edit' above
 // already handles updating a trip correctly.
 
-app.get('/trips/:id/share',checkAuthenticated,(req,res)=>{
-
-    const tripId = req.params.id;
-    const email = req.body.email;
-
-    res.render('ShareTrip',{
-        tripId: tripId
-    });
-});
-app.post('/trips/:id/share',checkAuthenticated,(req,res) =>{
-    const tripId = req.params.id;
-
-    // Enter email
-    const email = req.body.email;
 
     
 
-    db.query(
-        'SELECT userId FROM users WHERE email=?',[email],(err,results) => {
-            if (err){
-                return res.send("Database Error");
-            }
-            if (results.length === 0){
-                return res.send("User not found");
-            }
+    
 
-            const sharedUserId = results[0].userId;
 
-            db.query('INSERT INTO trip_share (trip_id, user_id, status) VALUES (?,?,?)',[tripId,sharedUserId,'Pending'],
-                (err) => 
-                {
-                    if (err){
-                        console.log(err);
-                        return res.send("Error sharing trip.");
-                    }
-
-                    res.send("Trip shared successfully!");
-                }
-            );
-        }
-    );
-
-});
-
-app.get('/ShareTrip', checkAuthenticated,(req,res)=>{
-    const userId = req.session.user.userId;
-
-    db.query('SELECT trip_share.trip_id, trip_share.status, trips.tripId,trips.tripName,trips.destination FROM trip_share JOIN trips ON trip_share.trip_id = trips.tripId WHERE trip_share.user_id =?',[userId],(err,results)=>{
-        if (err) 
-        {
-            console.log(err);
-            return res.send("Database Error");
-        }
-        
-        res.render("ShareTrip",{
-            trips: results
-        });
-    }
-);
-});
-        
 
 
 
