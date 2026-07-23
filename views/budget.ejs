@@ -82,11 +82,16 @@
             const editAmt = isEditing ? (editingExpense.amount || editingExpense.Amount || '') : '';
             const editCat = isEditing ? (editingExpense.category || editingExpense.Category || '') : '';
             const rawDate = isEditing ? (editingExpense.expenseDate || editingExpense['Expense Date'] || editingExpense.expensedate) : null;
+            
+            // Format date strictly in local timezone (prevents timezone offset bug)
             let editDateFormatted = '';
             if (rawDate) {
                 const d = new Date(rawDate);
                 if (!isNaN(d.getTime())) {
-                    editDateFormatted = d.toISOString().split('T')[0];
+                    const yyyy = d.getFullYear();
+                    const mm = String(d.getMonth() + 1).padStart(2, '0');
+                    const dd = String(d.getDate()).padStart(2, '0');
+                    editDateFormatted = `${yyyy}-${mm}-${dd}`;
                 }
             }
             const activeId = isEditing ? (editingExpense.expenseId || editingExpense.budgetid || editingExpense.id) : '';
