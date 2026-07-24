@@ -297,7 +297,7 @@ app.get('/trips/new', checkAuthenticated, (req,res)=>{
     });
 });
 
-// It will goes to the trip.ejs page and check if the user is authenticated 
+// When the user clicks Add a New Trip, it will go and check if the user is being authenticated to access the Add a New Trip webpage, if the user is being authenticated, it will render back to the New Trip ejs page. 
 // it will check for userId, tripName, destination, startDate and endDate
 
 app.post('/trips', checkAuthenticated, upload.single('image'), (req,res)=>{
