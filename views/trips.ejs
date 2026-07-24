@@ -7,12 +7,46 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/style.css">
+    <style>
+        html { scroll-behavior: smooth; }
+        .budget-container { max-width: 1000px; margin: 2rem auto; padding: 0 1rem; font-family: sans-serif; }
+        .alert { padding: 1rem; border-radius: 4px; margin-bottom: 1rem; }
+        .alert-success { background: #d4edda; color: #155724; }
+        .alert-danger { background: #f8d7da; color: #721c24; font-weight: bold; }
+
+         .progress-bar-bg { background: #e0e0e0; border-radius: 8px; height: 20px; overflow: hidden; margin: 0.5rem 0; }
+        .progress-bar-fill { height: 100%; transition: width 0.3s ease; }
+        .bg-normal { background: #28a745; }
+        .bg-warning { background: #ffc107; }
+        .bg-over { background: #dc3545; }
+
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1.5rem; }
+        .card { background: #fff; padding: 1.5rem; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .form-group { margin-bottom: 1rem; }
+        .form-group label { display: block; margin-bottom: 0.3rem; font-weight: bold; }
+        .form-group input, .form-group select { width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        .btn { padding: 0.5rem 1rem; border: none; border-radius: 4px; cursor: pointer; color: white; background: #007bff; text-decoration: none; display: inline-block; }
+        .btn-danger { background: #dc3545; }
+        .btn-sm { padding: 0.25rem 0.5rem; font-size: 0.85rem; }
+        
+        /* Fixed Floating Back Button */
+        .btn-floating-back { position: fixed; top: 80px; left: 20px; z-index: 1000; box-shadow: 0 2px 6px rgba(0,0,0,0.2); }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+        th, td { padding: 0.75rem; border-bottom: 1px solid #ddd; text-align: left; }
+        th { background: #f8f9fa; }
+        .actions-cell { display: flex; gap: 0.5rem; }
+    </style>
+
+
+
+     
 </head>
 <body>
 <%- include('partials/navbar') %>
+<a href="/" class="btn btn-outline btn-floating-back">&larr; Back</a>
 <div class="app-shell">
-    <%- include ('partials/sidebar',  { area: 'traveler', active:'/trips'}) %>
-    <div class="app-main">
+    
         <main class="app-content">
             <h1>My Trips</h1>
             <a href="/trips/new" class="btn btn-primary">
@@ -82,9 +116,7 @@
                        
                 <% }) %>
             <% } %>
-               <a href="/" class="btn btn-secondary">Back</a>
-
-        
+               
             
                         
         </main>
