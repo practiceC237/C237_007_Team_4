@@ -231,6 +231,7 @@ function saveActivity(req, res, db, editingItemId) {
         if (overlaps.length > 0) {
             const clash = overlaps[0];
             req.flash('error', `That time overlaps with "${clash.title}" (${clash.startTime}–${clash.endTime}).`);
+            req.flash('formData', { title, category, location, notes, activityDate, startTime, endTime });
             return redirectBack();
         }
 

@@ -7,16 +7,28 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .btn-floating-back {
+    display: inline-block;
+    margin: 16px 0 0 20px;
+    background: #007bff;
+    color: #ffffff;
+    border: none;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.btn-floating-back:hover {
+    background: #0069d9;
+    color: #ffffff;
+}
+    </style>
 </head>
 <body class="app-body">
     <%- include('partials/navbar') %>
+    <a href="/" class="btn btn-outline btn-floating-back">&larr; Back</a>
 
-    <div class="app-shell">
-        <%- include('partials/sidebar', { area: 'traveler', active: '/itinerary' }) %>
-
-        <div class="app-main">
-            <main class="app-content">
-                <%- include('partials/alerts') %>
+    <div class="app-content">
+        <%- include('partials/alerts') %>
 
                 <section class="page-header">
                     <h1><svg class="icon"><use href="/images/icons.svg#icon-route"></use></svg> Itinerary</h1>
@@ -50,9 +62,7 @@
                         <% }); %>
                     </div>
                 <% } %>
-            </main>
-        </div>
-    </div>
+            </div>
     <script src="/js/auth.js"></script>
 </body>
 </html>
